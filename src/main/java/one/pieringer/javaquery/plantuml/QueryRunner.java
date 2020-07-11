@@ -39,6 +39,10 @@ public class QueryRunner {
 
         LOG.info("Finished query...");
 
-        Desktop.getDesktop().open(new File(OUTPUT_SVG));
+        try {
+            Desktop.getDesktop().open(new File(OUTPUT_SVG));
+        } catch (IOException e) {
+            LOG.warn("Could not open class diagram with the default application.", e);
+        }
     }
 }
