@@ -2,6 +2,7 @@ package one.pieringer.javaquery.plantuml;
 
 import one.pieringer.javaquery.database.ResultSet;
 import one.pieringer.javaquery.model.FieldRelationship;
+import one.pieringer.javaquery.model.InheritanceRelationship;
 import one.pieringer.javaquery.model.Type;
 
 import javax.annotation.Nonnull;
@@ -25,6 +26,10 @@ public class PlantUmlTransformer {
             uml.append(transform(fieldRelationship));
         }
 
+        for (InheritanceRelationship inheritanceRelationship : resultSet.getInheritanceRelationships()) {
+            uml.append(transform(inheritanceRelationship));
+        }
+
         uml.append(END_UML);
 
         return uml.toString();
@@ -45,6 +50,16 @@ public class PlantUmlTransformer {
         uml.append(" ");
         uml.append("--> ");
         uml.append(fieldRelationship.getFieldType().getFullyQualifiedName());
+        uml.append("\n");
+        return uml;
+    }
+
+    private StringBuilder transform(@Nonnull final InheritanceRelationship inheritanceRelationship) {
+        StringBuilder uml = new StringBuilder();
+        uml.append(inheritanceRelationship.getSubType().getFullyQualifiedName());
+        uml.append(" ");
+        uml.append("--|> ");
+        uml.append(inheritanceRelationship.getSuperType().getFullyQualifiedName());
         uml.append("\n");
         return uml;
     }
