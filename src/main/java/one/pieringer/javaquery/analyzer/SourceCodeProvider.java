@@ -1,6 +1,8 @@
 package one.pieringer.javaquery.analyzer;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -11,6 +13,8 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public class SourceCodeProvider {
+
+    private static final Logger LOG = LogManager.getLogger(SourceCodeProvider.class);
 
     @Nonnull
     private final List<File> sourceFolders;
@@ -26,6 +30,7 @@ public class SourceCodeProvider {
 
     public void visitJavaFiles(@Nonnull final Consumer<File> javaFileConsumer) {
         for (File sourceFolder : sourceFolders) {
+            LOG.debug("Visiting {}", sourceFolder);
             Iterator<File> it = FileUtils.iterateFiles(sourceFolder, new String[]{"java"}, true);
             while (it.hasNext()) {
                 javaFileConsumer.accept(it.next());
