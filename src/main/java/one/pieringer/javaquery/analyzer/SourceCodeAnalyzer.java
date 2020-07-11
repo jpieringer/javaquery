@@ -103,7 +103,7 @@ public class SourceCodeAnalyzer {
                 if (fullyQualifiedName != null) {
                     fieldRelationships.add(new FieldRelationship(typeSet.getOrCreateType(containingType), typeSet.getOrCreateType(fullyQualifiedName)));
                 }
-            } catch (UnsolvedSymbolException e) {
+            } catch (UnsolvedSymbolException | UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
                 LOG.debug("Cannot resolve {} in {}.", type, containingType);
             }
         }
@@ -125,7 +125,7 @@ public class SourceCodeAnalyzer {
                     if (fullyQualifiedName != null) {
                         inheritanceRelationships.add(new InheritanceRelationship(typeSet.getOrCreateType(containingType), typeSet.getOrCreateType(fullyQualifiedName)));
                     }
-                } catch (UnsolvedSymbolException e) {
+                } catch (UnsolvedSymbolException | UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
                     LOG.debug("Cannot resolve {} in {}.", type, containingType);
                 }
             }
