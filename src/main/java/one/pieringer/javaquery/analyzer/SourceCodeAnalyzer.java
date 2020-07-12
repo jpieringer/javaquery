@@ -2,6 +2,7 @@ package one.pieringer.javaquery.analyzer;
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
+import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
@@ -101,7 +102,9 @@ public class SourceCodeAnalyzer {
             try {
                 final String fullyQualifiedName = javaParserWrapper.getType(type, n.findCompilationUnit().orElse(null));
                 if (fullyQualifiedName != null) {
-                    fieldRelationships.add(new FieldRelationship(typeSet.getOrCreateType(containingType), typeSet.getOrCreateType(fullyQualifiedName)));
+                    for (VariableDeclarator variableDeclarator : n.getVariables()) {
+                        fieldRelationships.add(new FieldRelationship(typeSet.getOrCreateType(containingType), variableDeclarator.getNameAsString(), typeSet.getOrCreateType(fullyQualifiedName)));
+                    }
                 }
             } catch (UnsolvedSymbolException | UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
                 LOG.debug("Cannot resolve {} in {}.", type, containingType);
@@ -147,9 +150,9 @@ public class SourceCodeAnalyzer {
             }
 
             if (StringUtils.isNotBlank(methodDeclaration.getPackageName())) {
-                invokeRelationships.add(new InvokeRelationship(typeSet.getOrCreateType(containingType), typeSet.getOrCreateType(methodDeclaration.getPackageName() + "." + methodDeclaration.getClassName())));
+                invokeRelationships.add(new InvokeRelationship(typeSet.getOrCreateType(containingType), n.getNameAsString(), typeSet.getOrCreateType(methodDeclaration.getPackageName() + "." + methodDeclaration.getClassName())));
             } else {
-                invokeRelationships.add(new InvokeRelationship(typeSet.getOrCreateType(containingType), typeSet.getOrCreateType(methodDeclaration.getClassName())));
+                invokeRelationships.add(new InvokeRelationship(typeSet.getOrCreateType(containingType), n.getNameAsString(), typeSet.getOrCreateType(methodDeclaration.getClassName())));
             }
         }
     }

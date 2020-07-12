@@ -19,6 +19,9 @@ public class FieldRelationship {
     @Nonnull
     private final Type containingType;
 
+    @Nonnull
+    private final String fieldName;
+
     @EndNode
     @Nonnull
     private final Type fieldType;
@@ -31,16 +34,23 @@ public class FieldRelationship {
     public FieldRelationship() {
         this.containingType = null;
         this.fieldType = null;
+        this.fieldName = "not initialized";
     }
 
-    public FieldRelationship(@Nonnull Type containingType, @Nonnull Type fieldType) {
+    public FieldRelationship(@Nonnull final Type containingType, @Nonnull final String fieldName, @Nonnull final Type fieldType) {
         this.containingType = Objects.requireNonNull(containingType);
+        this.fieldName = Objects.requireNonNull(fieldName);
         this.fieldType = Objects.requireNonNull(fieldType);
     }
 
     @Nonnull
     public Type getContainingType() {
         return containingType;
+    }
+
+    @Nonnull
+    public String getFieldName() {
+        return fieldName;
     }
 
     @Nonnull
@@ -52,6 +62,7 @@ public class FieldRelationship {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .add("containingType", containingType)
+                .add("fieldName", fieldName)
                 .add("fieldType", fieldType)
                 .toString();
     }
@@ -62,11 +73,12 @@ public class FieldRelationship {
         if (o == null || getClass() != o.getClass()) return false;
         FieldRelationship fieldRelationship = (FieldRelationship) o;
         return containingType.equals(fieldRelationship.containingType) &&
+                fieldName.equals(fieldRelationship.fieldName) &&
                 fieldType.equals(fieldRelationship.fieldType);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(containingType, fieldType);
+        return Objects.hash(containingType, fieldName, fieldType);
     }
 }

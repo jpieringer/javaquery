@@ -18,6 +18,9 @@ public class InvokeRelationship {
     @Nonnull
     private final Type containingType;
 
+    @Nonnull
+    private final String invokedMethod;
+
     @EndNode
     @Nonnull
     private final Type invokedType;
@@ -30,16 +33,23 @@ public class InvokeRelationship {
     public InvokeRelationship() {
         this.containingType = null;
         this.invokedType = null;
+        this.invokedMethod = "not initialized";
     }
 
-    public InvokeRelationship(@Nonnull Type containingType, @Nonnull Type invokedType) {
+    public InvokeRelationship(@Nonnull final Type containingType, @Nonnull final String invokedMethod, @Nonnull final Type invokedType) {
         this.containingType = Objects.requireNonNull(containingType);
+        this.invokedMethod = Objects.requireNonNull(invokedMethod);
         this.invokedType = Objects.requireNonNull(invokedType);
     }
 
     @Nonnull
     public Type getContainingType() {
         return containingType;
+    }
+
+    @Nonnull
+    public String getInvokedMethod() {
+        return invokedMethod;
     }
 
     @Nonnull
@@ -51,6 +61,7 @@ public class InvokeRelationship {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .add("containingType", containingType)
+                .add("invokedMethod", invokedMethod)
                 .add("invokedType", invokedType)
                 .toString();
     }
@@ -61,11 +72,12 @@ public class InvokeRelationship {
         if (o == null || getClass() != o.getClass()) return false;
         InvokeRelationship fieldRelationship = (InvokeRelationship) o;
         return containingType.equals(fieldRelationship.containingType) &&
+                invokedMethod.equals(fieldRelationship.invokedMethod) &&
                 invokedType.equals(fieldRelationship.invokedType);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(containingType, invokedType);
+        return Objects.hash(containingType, invokedMethod, invokedType);
     }
 }
