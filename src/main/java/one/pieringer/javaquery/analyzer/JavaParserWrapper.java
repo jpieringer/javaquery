@@ -78,6 +78,11 @@ public class JavaParserWrapper {
     @Nonnull
     public String getParentClassOrInterfaceDeclaration(@Nonnull final Node node) {
         if (node instanceof ClassOrInterfaceDeclaration) {
+            if (((ClassOrInterfaceDeclaration) node).isLocalClassDeclaration()) {
+                // A local class declaration does not by itself have a fully qualified name, use the one
+                // from the parent class.
+                return getParentClassOrInterfaceDeclaration(node.getParentNode().get());
+            }
             return ((ClassOrInterfaceDeclaration) node).getFullyQualifiedName().orElseThrow();
         }
         if (node instanceof EnumDeclaration) {
