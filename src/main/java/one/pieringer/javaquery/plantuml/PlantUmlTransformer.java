@@ -6,20 +6,23 @@ import one.pieringer.javaquery.model.InheritanceRelationship;
 import one.pieringer.javaquery.model.Type;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class PlantUmlTransformer {
     public static final String START_UML = "@startuml\n";
     public static final String END_UML = "@enduml\n";
 
-    public String transform(@Nonnull final ResultSet resultSet) {
+    public String transform(@Nonnull final ResultSet resultSet, @Nonnull final Map<Type, List<String>> classToStereotypesMap) {
         Objects.requireNonNull(resultSet);
 
         StringBuilder uml = new StringBuilder();
         uml.append(START_UML);
 
         for (Type clazz : resultSet.getTypes()) {
-            uml.append(transform(clazz));
+            uml.append(transform(clazz, classToStereotypesMap.getOrDefault(clazz, new ArrayList<>())));
         }
 
         for (FieldRelationship fieldRelationship : resultSet.getFieldRelationships()) {
@@ -35,10 +38,15 @@ public class PlantUmlTransformer {
         return uml.toString();
     }
 
-    private StringBuilder transform(@Nonnull final Type clazz) {
+    private StringBuilder transform(@Nonnull final Type clazz, @Nonnull final List<String> stereotypes) {
         StringBuilder uml = new StringBuilder();
         uml.append("class ");
         uml.append(clazz.getFullyQualifiedName());
+        if (stereotypes.size() > 0) {
+            uml.append(" <<");
+            uml.append(String.join(", ", stereotypes));
+            uml.append(" >>");
+        }
         uml.append(" {\n");
         uml.append("}\n");
         return uml;

@@ -10,13 +10,15 @@ import java.util.*;
 
 public class GraphPersistence {
 
+    @Nonnull
     private final SessionFactory sessionFactory;
 
-    public GraphPersistence(SessionFactory sessionFactory) {
-        this.sessionFactory = sessionFactory;
+    public GraphPersistence(@Nonnull final SessionFactory sessionFactory) {
+        this.sessionFactory = Objects.requireNonNull(sessionFactory);
     }
 
-    public <T> void persist(Set<T> classes) {
+    public <T> void persist(@Nonnull final Set<T> classes) {
+        Objects.requireNonNull(classes);
         Session session = sessionFactory.openSession();
         final var transaction = session.beginTransaction();
         session.save(classes, 0);

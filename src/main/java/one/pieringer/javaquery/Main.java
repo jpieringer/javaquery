@@ -18,16 +18,15 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class Main {
 
     private static final String OPTION_ANALYZE = "analyze";
     private static final String OPTION_QUERY = "query";
     private static final String OPTION_DATABASE_URI = "databaseUri";
+    private static final String OPTION_STEREOTYPE = "stereotype";
+    private static final String OPTION_STEREOTYPE_QUERY = "stereotypeQuery";
 
     private static final Path EMBEDDED_DATABASE_DIRECTORY = Paths.get("database");
     private static final String EMBEDDED_DATABASE_NAME = "neo4j";
@@ -54,6 +53,8 @@ public class Main {
         options.addOption(OPTION_QUERY, true, "Run the specified Cypher query.");
         options.addOption(OPTION_DATABASE_URI, true,
                 "The URI of the database that should be connected to. The embedded database is used if this parameter is omitted.");
+        options.addOption(OPTION_STEREOTYPE, true, "The name of the stereotype that should be attached to certain classes.");
+        options.addOption(OPTION_STEREOTYPE_QUERY, true, "The query that returns all classes to which the previous specified stereotype should be attached.");
         final CommandLineParser parser = new DefaultParser();
         final CommandLine cmd = parser.parse(options, args);
 
@@ -65,10 +66,23 @@ public class Main {
             sourceDirectories = Arrays.asList(StringUtils.split(analyze, File.pathSeparator()));
         }
 
+        final String[] stereotypes = cmd.getOptionValues(OPTION_STEREOTYPE);
+        final String[] stereotypeQueries = cmd.getOptionValues(OPTION_STEREOTYPE_QUERY);
+
+        if (stereotypes.length != stereotypeQueries.length) {
+            throw new IllegalArgumentException("Number of " + OPTION_STEREOTYPE + " arguments and " + OPTION_STEREOTYPE_QUERY + " arguments must be equal.");
+        }
+
+        final HashMap<String, String> stereotypeQueryMap = new HashMap<>();
+        for (int i = 0; i < stereotypes.length; i++) {
+            stereotypeQueryMap.put(stereotypes[i], stereotypeQueries[i]);
+        }
+
         return new CommandLineOptions(
                 analyze != null,
                 sourceDirectories,
                 query,
+                stereotypeQueryMap,
                 cmd.getOptionValue(OPTION_DATABASE_URI, null));
     }
 
@@ -103,7 +117,7 @@ public class Main {
             }
 
             if (commandLineOptions.query != null) {
-                queryRunner.runQuery(commandLineOptions.query, graphPersistence);
+                queryRunner.runQuery(commandLineOptions.query, commandLineOptions.stereotypeQueries, graphPersistence);
             }
         } finally {
             sessionFactory.close();
@@ -121,16 +135,22 @@ public class Main {
 
     private static class CommandLineOptions {
         final boolean doAnalyze;
+        @Nonnull
         final List<String> sourceDirectories;
+        @CheckForNull
         final String query;
+        @Nonnull
+        final HashMap<String, String> stereotypeQueries;
+        @CheckForNull
         final String databaseUri;
 
         public CommandLineOptions(final boolean doAnalyze, @Nonnull final List<String> sourceDirectories,
                                   @CheckForNull final String query,
-                                  @CheckForNull final String databaseUri) {
+                                  @Nonnull final HashMap<String, String> stereotypeQueries, @CheckForNull final String databaseUri) {
             this.doAnalyze = doAnalyze;
             this.sourceDirectories = Objects.requireNonNull(sourceDirectories);
             this.query = query;
+            this.stereotypeQueries = Objects.requireNonNull(stereotypeQueries);
             this.databaseUri = databaseUri;
         }
     }
