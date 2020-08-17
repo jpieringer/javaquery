@@ -8,6 +8,7 @@ import one.pieringer.javaquery.plantuml.PlantUmlToSvgTransformer;
 import one.pieringer.javaquery.plantuml.PlantUmlTransformer;
 import one.pieringer.javaquery.plantuml.QueryRunner;
 import org.apache.commons.cli.*;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.neo4j.ogm.config.Configuration;
 import org.neo4j.ogm.session.SessionFactory;
@@ -66,10 +67,10 @@ public class Main {
             sourceDirectories = Arrays.asList(StringUtils.split(analyze, File.pathSeparator()));
         }
 
-        final String[] stereotypes = cmd.getOptionValues(OPTION_STEREOTYPE);
-        final String[] stereotypeQueries = cmd.getOptionValues(OPTION_STEREOTYPE_QUERY);
+        final String[] stereotypes = ArrayUtils.nullToEmpty(cmd.getOptionValues(OPTION_STEREOTYPE));
+        final String[] stereotypeQueries = ArrayUtils.nullToEmpty(cmd.getOptionValues(OPTION_STEREOTYPE_QUERY));
 
-        if (stereotypes.length != stereotypeQueries.length) {
+        if (!ArrayUtils.isSameLength(stereotypes, stereotypeQueries)) {
             throw new IllegalArgumentException("Number of " + OPTION_STEREOTYPE + " arguments and " + OPTION_STEREOTYPE_QUERY + " arguments must be equal.");
         }
 
