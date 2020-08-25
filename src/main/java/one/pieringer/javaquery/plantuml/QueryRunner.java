@@ -6,11 +6,9 @@ import one.pieringer.javaquery.model.Type;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import java.awt.*;
-import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.*;
 
 public class QueryRunner {
@@ -30,7 +28,7 @@ public class QueryRunner {
     }
 
     public void runQuery(@Nonnull final String query, @Nonnull final HashMap<String, String> stereotypeQueries,
-                         @Nonnull final GraphPersistence graphPersistence) throws IOException {
+                         @Nonnull final GraphPersistence graphPersistence, @CheckForNull String outPath) throws IOException {
         Objects.requireNonNull(query);
         Objects.requireNonNull(graphPersistence);
 
@@ -40,15 +38,12 @@ public class QueryRunner {
         final Map<Type, List<String>> classToStereotypesMap = executeStereotypeQueries(stereotypeQueries, graphPersistence);
 
         final String plantUml = plantUmlTransformer.transform(resultSet, classToStereotypesMap);
-        plantUmlToSvgTransformer.generatePng(plantUml, OUTPUT_SVG);
+        if (outPath == null) {
+            outPath = OUTPUT_SVG;
+        }
+        plantUmlToSvgTransformer.generateSvg(plantUml, outPath);
 
         LOG.info("Finished query...");
-
-        try {
-            Desktop.getDesktop().open(new File(OUTPUT_SVG));
-        } catch (IOException e) {
-            LOG.warn("Could not open class diagram with the default application.", e);
-        }
     }
 
     @Nonnull

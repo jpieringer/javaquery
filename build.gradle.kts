@@ -1,5 +1,8 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     id("java")
+    id("com.github.johnrengelman.shadow") version "6.0.0"
 }
 
 repositories {
@@ -31,4 +34,18 @@ dependencies {
 java {
     sourceCompatibility = JavaVersion.VERSION_14
     targetCompatibility = JavaVersion.VERSION_14
+}
+
+tasks {
+    named<ShadowJar>("shadowJar") {
+        archiveFileName.set("javaquery-full.jar")
+        mergeServiceFiles()
+        manifest {
+            attributes(mapOf("Main-Class" to "one.pieringer.javaquery.Main"))
+        }
+    }
+
+    build {
+        dependsOn(shadowJar)
+    }
 }

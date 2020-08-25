@@ -3,12 +3,33 @@
 ## Description
 Parses a Java application and allows querying a simplified AST (abstract syntax tree) via Cypher queries.
 
-## Prerequisites
-Download and install Graphviz 2.38 from https://graphviz.org/_pages/Download/Download_windows.html
+## Getting started
+### Setup on your local machine
+1. Download and install Graphviz 2.38 from https://graphviz.org/_pages/Download/Download_windows.html
+2. Run via `java -jar javaquery-full.jar`
+
+### Run via docker
+1. Start the Neo4J docker container
+```
+docker run --name neo4j --publish=7474:7474 --publish=7687:7687 --volume=$HOME/neo4j/data:/data --env=NEO4J_AUTH=none neo4j:latest
+```
+2. Execute javaquery via docker: 
+```
+docker run \
+ --mount type=bind,source="/mnt/c/workspace/jetty.project-jetty-9.4.30.v20200611,target=/source" \
+ --mount type=bind,source="/mnt/c/workspace/out,target=/out" \
+ --link neo4j \
+ javaquery:latest \
+ -analyze /source/jetty-http/src/main/java\:/source/jetty-http2/http2-common/src/main/java \
+ -query "MATCH (type:Type)-[r*0..1]->(otherType:Type) RETURN type, r, otherType" \
+ -stereotype Toggleable -stereotypeQuery "MATCH (type:Type)-[r*0..1]->(otherType:Type) WHERE (type.fullyQualifiedName STARTS WITH 'com.salesmanager.shop.admin.controller.') RETURN type" \
+ -databaseUri bolt://neo4j:7687 \
+ -out /out/out.svg
+```
 
 ## Synopsis
 ```
-java -jar javaquery.jar 
+java -jar javaquery-full.jar 
 (-analyze <paths separated with ;>|-query <cypher query>)
 [-databaseUri <database URI>]
 [-stereotype <name> -stereotypeQuery <cypher query>]*
@@ -30,9 +51,12 @@ The name of the stereotype that should be attached to certain classes.
 *-stereotypeQuery*
 The query that returns all classes to which the previous specified stereotype should be attached.
 
+*-out*
+The path where the generated diagram should be stored.
+
 ## Example invocations
 ```
-javaquery.jar
+java -jar javaquery-full.jar
  -analyze C:\workspace
  -query "MATCH (type:Type)-[r*0..1]->(otherType:Type) WHERE (type.fullyQualifiedName STARTS WITH 'com.salesmanager.shop.admin.controller.') RETURN type, r, otherType"
  -stereotype Toggleable -stereotypeQuery "MATCH (type:Type)-[r*0..1]->(otherType:Type) WHERE (type.fullyQualifiedName STARTS WITH 'com.salesmanager.shop.admin.controller.') RETURN type"
@@ -75,3 +99,8 @@ Describes that any code within a class creates an instance of another class.
 
 *from*: The type that contains the code that performs the create instance operation.
 *to*: The type of the object that gets created.
+
+
+## Future work
+* Consider an alternative java parser: http://spoon.gforge.inria.fr/
+
