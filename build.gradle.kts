@@ -3,6 +3,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     id("java")
     id("com.github.johnrengelman.shadow") version "6.0.0"
+    id("com.palantir.docker") version "0.22.1"
 }
 
 repositories {
@@ -48,4 +49,10 @@ tasks {
     build {
         dependsOn(shadowJar)
     }
+}
+
+docker {
+    name = "piri/javaquery:${project.version}"
+    copySpec.from("build/libs/javaquery-full.jar").into("build/libs/javaquery-full.jar")
+    tag("DockerHub", "piri/javaquery:${project.version}")
 }
