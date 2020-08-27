@@ -29,12 +29,16 @@ public class SourceCodeProvider {
     }
 
     public void visitJavaFiles(@Nonnull final Consumer<File> javaFileConsumer) {
+        int i = 0;
         for (File sourceFolder : sourceFolders) {
-            LOG.debug("Visiting {}", sourceFolder);
+            i++;
             Iterator<File> it = FileUtils.iterateFiles(sourceFolder, new String[]{"java"}, true);
+            int fileCount = 0;
             while (it.hasNext()) {
                 javaFileConsumer.accept(it.next());
+                fileCount++;
             }
+            LOG.info("({}/{}) Visited (Files: {}) {}", i, sourceFolders.size(), fileCount, sourceFolder);
         }
     }
 }
