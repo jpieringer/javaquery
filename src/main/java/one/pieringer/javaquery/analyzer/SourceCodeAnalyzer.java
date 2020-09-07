@@ -3,18 +3,18 @@ package one.pieringer.javaquery.analyzer;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
+import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.github.javaparser.resolution.UnsolvedSymbolException;
+import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
+import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import com.google.common.collect.Iterables;
 import one.pieringer.javaquery.database.ResultSet;
-import one.pieringer.javaquery.model.CreateInstanceRelationship;
-import one.pieringer.javaquery.model.FieldRelationship;
-import one.pieringer.javaquery.model.InheritanceRelationship;
-import one.pieringer.javaquery.model.InvokeRelationship;
+import one.pieringer.javaquery.model.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,6 +47,7 @@ public class SourceCodeAnalyzer {
                 .addFieldRelationships(visitor.fieldRelationships)
                 .addInheritanceRelationships(visitor.inheritanceRelationships)
                 .addInvokeRelationships(visitor.invokeRelationships)
+                .addAccessFieldRelationships(visitor.accessFieldRelationships)
                 .addTypes(visitor.typeSet.getTypes())
                 .build();
     }
@@ -64,6 +65,8 @@ public class SourceCodeAnalyzer {
         private final Set<InheritanceRelationship> inheritanceRelationships = new HashSet<>();
         @Nonnull
         private final Set<InvokeRelationship> invokeRelationships = new HashSet<>();
+        @Nonnull
+        private final Set<AccessFieldRelationship> accessFieldRelationships = new HashSet<>();
 
         public Visitor(@Nonnull final JavaParserWrapper javaParserWrapper) {
             this.javaParserWrapper = Objects.requireNonNull(javaParserWrapper);
@@ -153,6 +156,37 @@ public class SourceCodeAnalyzer {
                 invokeRelationships.add(new InvokeRelationship(typeSet.getOrCreateType(containingType), n.getNameAsString(), typeSet.getOrCreateType(methodDeclaration.getPackageName() + "." + methodDeclaration.getClassName())));
             } else {
                 invokeRelationships.add(new InvokeRelationship(typeSet.getOrCreateType(containingType), n.getNameAsString(), typeSet.getOrCreateType(methodDeclaration.getClassName())));
+            }
+        }
+
+        @Override
+        public void visit(FieldAccessExpr n, Void arg) {
+            super.visit(n, arg);
+            Objects.requireNonNull(n);
+
+            String containingType = javaParserWrapper.getParentClassOrInterfaceDeclaration(n);
+
+            ResolvedValueDeclaration valueDeclaration;
+            try {
+                valueDeclaration = n.resolve();
+            } catch (RuntimeException e) {
+                LOG.debug("Cannot resolve {} in {}.", n, containingType);
+                return;
+            }
+
+            try {
+                if (valueDeclaration instanceof ResolvedFieldDeclaration) {
+                    ResolvedFieldDeclaration resolvedFieldDeclaration = (ResolvedFieldDeclaration) valueDeclaration;
+                    if (resolvedFieldDeclaration.declaringType().isType()) {
+                        accessFieldRelationships.add(
+                                new AccessFieldRelationship(typeSet.getOrCreateType(containingType),
+                                        n.getNameAsString(),
+                                        typeSet.getOrCreateType(resolvedFieldDeclaration.declaringType().asReferenceType().getQualifiedName())));
+                    }
+                }
+
+            } catch (UnsolvedSymbolException | UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+                LOG.debug("Cannot resolve {} in {}.", valueDeclaration, containingType);
             }
         }
     }

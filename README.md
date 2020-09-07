@@ -94,12 +94,18 @@ Describes that a type has a field of another type.
 *to*: The type of the field.
 *fieldName*: The name of the field that is invoked.
  
- ### CREATE_INSTANCE
+### CREATE_INSTANCE
 Describes that any code within a class creates an instance of another class.
 
-*from*: The type that contains the code that performs the create instance operation.
+*from*: The type that contains the code that performs create instance operation.
 *to*: The type of the object that gets created.
 
+### ACCESS_FIELD
+Describes that any code within a class access a field of another class.
+
+*from*: The type that contains the code that performs field access.
+*to*: The type of the object that contains the field that gets access.
+*fieldName*: The name of the field that is accessed.
 
 ## Future work
 * Consider an alternative java parser: http://spoon.gforge.inria.fr/

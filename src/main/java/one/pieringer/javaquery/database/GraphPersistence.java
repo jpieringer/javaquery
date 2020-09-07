@@ -31,6 +31,7 @@ public class GraphPersistence {
         session.deleteAll(CreateInstanceRelationship.class);
         session.deleteAll(FieldRelationship.class);
         session.deleteAll(InheritanceRelationship.class);
+        session.deleteAll(AccessFieldRelationship.class);
     }
 
     public ResultSet executeQuery(@Nonnull final String query) {
@@ -61,6 +62,8 @@ public class GraphPersistence {
             resultSetBuilder.addInheritanceRelationship((InheritanceRelationship) entry);
         } else if (entry instanceof InvokeRelationship) {
             resultSetBuilder.addInvokeRelationship((InvokeRelationship) entry);
+        } else if (entry instanceof AccessFieldRelationship) {
+            resultSetBuilder.addAccessFieldRelationship((AccessFieldRelationship) entry);
         } else if (entry instanceof Type) {
             resultSetBuilder.addType((Type) entry);
         } else if (entry instanceof Collection) {

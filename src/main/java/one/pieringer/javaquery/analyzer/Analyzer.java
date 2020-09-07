@@ -42,6 +42,7 @@ public class Analyzer {
         LOG.info("Found {} field relationships.", resultSet.getFieldRelationships().size());
         LOG.info("Found {} create instance relationships.", resultSet.getCreateInstanceRelationships().size());
         LOG.info("Found {} invoke relationships.", resultSet.getInvokeRelationships().size());
+        LOG.info("Found {} access field relationships.", resultSet.getAccessFieldRelationships().size());
         LOG.info("Analysis took {} sec.", stopWatch.getTime(TimeUnit.SECONDS));
 
         stopWatch = StopWatch.createStarted();
@@ -54,6 +55,7 @@ public class Analyzer {
         graphPersistence.persist(resultSet.getFieldRelationships());
         graphPersistence.persist(resultSet.getInheritanceRelationships());
         graphPersistence.persist(resultSet.getInvokeRelationships());
+        graphPersistence.persist(resultSet.getAccessFieldRelationships());
         LOG.info("Stored graph in {} sec.", stopWatch.getTime(TimeUnit.SECONDS));
     }
 }
