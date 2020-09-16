@@ -41,7 +41,7 @@ public class PlantUmlTransformer {
     private StringBuilder transform(@Nonnull final Type clazz, @Nonnull final List<String> stereotypes) {
         StringBuilder uml = new StringBuilder();
         uml.append("class ");
-        uml.append(clazz.getFullyQualifiedName());
+        uml.append(clazz.getName());
         if (stereotypes.size() > 0) {
             uml.append(" <<");
             uml.append(String.join(", ", stereotypes));
@@ -54,20 +54,20 @@ public class PlantUmlTransformer {
 
     private StringBuilder transform(@Nonnull final FieldRelationship fieldRelationship) {
         StringBuilder uml = new StringBuilder();
-        uml.append(fieldRelationship.getContainingType().getFullyQualifiedName());
+        uml.append(fieldRelationship.getContainingType().getName());
         uml.append(" ");
         uml.append("--> ");
-        uml.append(fieldRelationship.getFieldType().getFullyQualifiedName());
+        uml.append(fieldRelationship.getFieldType().getName());
         uml.append("\n");
         return uml;
     }
 
     private StringBuilder transform(@Nonnull final InheritanceRelationship inheritanceRelationship) {
         StringBuilder uml = new StringBuilder();
-        uml.append(inheritanceRelationship.getSubType().getFullyQualifiedName());
+        uml.append(inheritanceRelationship.getSubType().getName());
         uml.append(" ");
         uml.append("--|> ");
-        uml.append(inheritanceRelationship.getSuperType().getFullyQualifiedName());
+        uml.append(inheritanceRelationship.getSuperType().getName());
         uml.append("\n");
         return uml;
     }

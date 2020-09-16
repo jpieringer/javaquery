@@ -43,6 +43,11 @@ public class Type {
     }
 
     @Nonnull
+    public String getName() {
+        return name;
+    }
+
+    @Nonnull
     public String getFullyQualifiedName() {
         return fullyQualifiedName;
     }
