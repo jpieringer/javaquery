@@ -19,7 +19,7 @@ docker run \
  --mount type=bind,source="/mnt/c/workspace/jetty.project-jetty-9.4.30.v20200611,target=/source" \
  --mount type=bind,source="/mnt/c/workspace/out,target=/out" \
  --link neo4j \
- javaquery:latest \
+ piri/javaquery:latest \
  -analyze /source/jetty-http/src/main/java\:/source/jetty-http2/http2-common/src/main/java \
  -query "MATCH (type:Type)-[r*0..1]->(otherType:Type) RETURN type, r, otherType" \
  -stereotype Toggleable -stereotypeQuery "MATCH (type:Type)-[r*0..1]->(otherType:Type) WHERE (type.fullyQualifiedName STARTS WITH 'com.salesmanager.shop.admin.controller.') RETURN type" \

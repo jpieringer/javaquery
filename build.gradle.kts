@@ -49,6 +49,10 @@ tasks {
     build {
         dependsOn(shadowJar)
     }
+
+    named<DefaultTask>("docker") {
+        dependsOn(build)
+    }
 }
 
 docker {
