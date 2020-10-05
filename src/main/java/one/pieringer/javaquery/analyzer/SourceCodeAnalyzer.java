@@ -10,19 +10,15 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration;
-import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import com.google.common.collect.Iterables;
 import one.pieringer.javaquery.database.ResultSet;
 import one.pieringer.javaquery.model.*;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 
 public class SourceCodeAnalyzer {
 
@@ -39,37 +35,27 @@ public class SourceCodeAnalyzer {
     public ResultSet analyze(@Nonnull final SourceCodeProvider sourceCodeProvider) {
         Objects.requireNonNull(sourceCodeProvider);
 
-        Visitor visitor = new Visitor(javaParserWrapper);
+        final TypeSet typeSet = new TypeSet();
+        final ResultSet.ResultSetBuilder resultSetBuilder = new ResultSet.ResultSetBuilder();
+        final Visitor visitor = new Visitor(javaParserWrapper, typeSet, resultSetBuilder);
+
         sourceCodeProvider.visitJavaFiles(javaFile -> visitor.visit(javaParserWrapper.parseFile(javaFile), null));
 
-        return new ResultSet.ResultSetBuilder()
-                .addCreateInstanceRelationships(visitor.createInstanceRelationships)
-                .addFieldRelationships(visitor.fieldRelationships)
-                .addInheritanceRelationships(visitor.inheritanceRelationships)
-                .addInvokeRelationships(visitor.invokeRelationships)
-                .addAccessFieldRelationships(visitor.accessFieldRelationships)
-                .addTypes(visitor.typeSet.getTypes())
-                .build();
+        return resultSetBuilder.addTypes(typeSet.getTypes()).build();
     }
 
     private static class Visitor extends VoidVisitorAdapter<Void> {
         @Nonnull
         private final JavaParserWrapper javaParserWrapper;
         @Nonnull
-        private final TypeSet typeSet = new TypeSet();
+        private final TypeSet typeSet;
         @Nonnull
-        private final Set<CreateInstanceRelationship> createInstanceRelationships = new HashSet<>();
-        @Nonnull
-        private final Set<FieldRelationship> fieldRelationships = new HashSet<>();
-        @Nonnull
-        private final Set<InheritanceRelationship> inheritanceRelationships = new HashSet<>();
-        @Nonnull
-        private final Set<InvokeRelationship> invokeRelationships = new HashSet<>();
-        @Nonnull
-        private final Set<AccessFieldRelationship> accessFieldRelationships = new HashSet<>();
+        private final ResultSet.ResultSetBuilder resultSetBuilder;
 
-        public Visitor(@Nonnull final JavaParserWrapper javaParserWrapper) {
+        public Visitor(@Nonnull final JavaParserWrapper javaParserWrapper, @Nonnull final TypeSet typeSet, @Nonnull final ResultSet.ResultSetBuilder resultSetBuilder) {
             this.javaParserWrapper = Objects.requireNonNull(javaParserWrapper);
+            this.typeSet = Objects.requireNonNull(typeSet);
+            this.resultSetBuilder = Objects.requireNonNull(resultSetBuilder);
         }
 
         @Override
@@ -83,7 +69,7 @@ public class SourceCodeAnalyzer {
             try {
                 final String fullyQualifiedName = javaParserWrapper.getType(type, expr.findCompilationUnit().orElse(null));
                 if (fullyQualifiedName != null) {
-                    createInstanceRelationships.add(new CreateInstanceRelationship(typeSet.getOrCreateType(containingType), typeSet.getOrCreateType(fullyQualifiedName)));
+                    resultSetBuilder.addCreateInstanceRelationship(new CreateInstanceRelationship(typeSet.getOrCreateType(containingType), typeSet.getOrCreateType(fullyQualifiedName)));
                 }
             } catch (UnsolvedSymbolException | UnsupportedOperationException e) {   // Don't know why the UnsupportedOperationException is thrown.
                 LOG.debug("Cannot resolve {} in {}.", type, containingType);
@@ -106,7 +92,7 @@ public class SourceCodeAnalyzer {
                 final String fullyQualifiedName = javaParserWrapper.getType(type, n.findCompilationUnit().orElse(null));
                 if (fullyQualifiedName != null) {
                     for (VariableDeclarator variableDeclarator : n.getVariables()) {
-                        fieldRelationships.add(new FieldRelationship(typeSet.getOrCreateType(containingType), variableDeclarator.getNameAsString(), typeSet.getOrCreateType(fullyQualifiedName)));
+                        resultSetBuilder.addFieldRelationship(new FieldRelationship(typeSet.getOrCreateType(containingType), variableDeclarator.getNameAsString(), typeSet.getOrCreateType(fullyQualifiedName)));
                     }
                 }
             } catch (UnsolvedSymbolException | UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
@@ -129,7 +115,7 @@ public class SourceCodeAnalyzer {
                 try {
                     final String fullyQualifiedName = javaParserWrapper.getType(type, n.findCompilationUnit().orElse(null));
                     if (fullyQualifiedName != null) {
-                        inheritanceRelationships.add(new InheritanceRelationship(typeSet.getOrCreateType(containingType), typeSet.getOrCreateType(fullyQualifiedName)));
+                        resultSetBuilder.addInheritanceRelationship(new InheritanceRelationship(typeSet.getOrCreateType(containingType), typeSet.getOrCreateType(fullyQualifiedName)));
                     }
                 } catch (UnsolvedSymbolException | UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
                     LOG.debug("Cannot resolve {} in {}.", type, containingType);
@@ -144,19 +130,19 @@ public class SourceCodeAnalyzer {
 
             String containingType = javaParserWrapper.getParentClassOrInterfaceDeclaration(n);
 
-            ResolvedMethodDeclaration methodDeclaration;
+            if (n.getScope().isEmpty()) {
+                return; // The scope is null for e.g. static import method calls
+            }
+
+            String fullyQualifiedName;
             try {
-                methodDeclaration = n.resolve();
+                fullyQualifiedName = n.getScope().get().calculateResolvedType().describe();
             } catch (RuntimeException e) {    // Don't know why the RuntimeException is thrown.
                 LOG.debug("Cannot resolve {} in {}.", n, containingType);
                 return;
             }
 
-            if (StringUtils.isNotBlank(methodDeclaration.getPackageName())) {
-                invokeRelationships.add(new InvokeRelationship(typeSet.getOrCreateType(containingType), n.getNameAsString(), typeSet.getOrCreateType(methodDeclaration.getPackageName() + "." + methodDeclaration.getClassName())));
-            } else {
-                invokeRelationships.add(new InvokeRelationship(typeSet.getOrCreateType(containingType), n.getNameAsString(), typeSet.getOrCreateType(methodDeclaration.getClassName())));
-            }
+            resultSetBuilder.addInvokeRelationship(new InvokeRelationship(typeSet.getOrCreateType(containingType), n.getNameAsString(), typeSet.getOrCreateType(fullyQualifiedName)));
         }
 
         @Override
@@ -178,7 +164,7 @@ public class SourceCodeAnalyzer {
                 if (valueDeclaration instanceof ResolvedFieldDeclaration) {
                     ResolvedFieldDeclaration resolvedFieldDeclaration = (ResolvedFieldDeclaration) valueDeclaration;
                     if (resolvedFieldDeclaration.declaringType().isType()) {
-                        accessFieldRelationships.add(
+                        resultSetBuilder.addAccessFieldRelationship(
                                 new AccessFieldRelationship(typeSet.getOrCreateType(containingType),
                                         n.getNameAsString(),
                                         typeSet.getOrCreateType(resolvedFieldDeclaration.declaringType().asReferenceType().getQualifiedName())));
