@@ -32,13 +32,14 @@ public class SourceCodeProvider {
         int i = 0;
         for (File sourceFolder : sourceFolders) {
             i++;
+            LOG.info("({}/{}) Visiting {}", i, sourceFolders.size(), sourceFolder);
             Iterator<File> it = FileUtils.iterateFiles(sourceFolder, new String[]{"java"}, true);
             int fileCount = 0;
             while (it.hasNext()) {
                 javaFileConsumer.accept(it.next());
                 fileCount++;
             }
-            LOG.info("({}/{}) Visited (Files: {}) {}", i, sourceFolders.size(), fileCount, sourceFolder);
+            LOG.info("({}/{}) Parsed (Files: {})", i, sourceFolders.size(), fileCount);
         }
     }
 }
