@@ -23,9 +23,9 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core:2.13.3")
     implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.13.3")
     // Neo4J driver
-    implementation("org.neo4j:neo4j-ogm-core:3.2.13")
-    implementation("org.neo4j:neo4j-ogm-bolt-driver:3.2.13")
-    implementation("org.neo4j:neo4j-ogm-bolt-native-types:3.2.13")
+    implementation("org.neo4j:neo4j-ogm-core:3.2.16")
+    implementation("org.neo4j:neo4j-ogm-bolt-driver:3.2.16")
+    implementation("org.neo4j:neo4j-ogm-bolt-native-types:3.2.16")
 
     implementation(files("libs/plantuml-1.2020.14.jar"))
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.8")
