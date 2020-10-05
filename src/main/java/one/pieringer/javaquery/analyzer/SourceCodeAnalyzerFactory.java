@@ -8,6 +8,7 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeS
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
 
 import javax.annotation.Nonnull;
+import java.util.HashMap;
 import java.util.Objects;
 
 public class SourceCodeAnalyzerFactory {
@@ -19,7 +20,7 @@ public class SourceCodeAnalyzerFactory {
         CombinedTypeSolver typeSolver = new CombinedTypeSolver(new ReflectionTypeSolver());
         sourceCodeProvider.getSourceFolders().forEach(sourceFolder -> typeSolver.add(new JavaParserTypeSolver(sourceFolder)));
         ParserConfiguration parserConfiguration = new ParserConfiguration();
-        parserConfiguration.setSymbolResolver(new JavaSymbolSolver(typeSolver));
+        parserConfiguration.setSymbolResolver(new JavaSymbolSolver(new CacheTypesSolver(typeSolver, new HashMap<>())));
         JavaParserWrapper javaParserWrapper = new JavaParserWrapper(new JavaParser(parserConfiguration));
 
         return new SourceCodeAnalyzer(javaParserWrapper);
