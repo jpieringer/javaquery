@@ -4,7 +4,7 @@ import one.pieringer.javaquery.analyzer.Analyzer;
 import one.pieringer.javaquery.analyzer.SourceCodeAnalyzerFactory;
 import one.pieringer.javaquery.database.EmbeddedDatabase;
 import one.pieringer.javaquery.database.GraphPersistence;
-import one.pieringer.javaquery.plantuml.PlantUmlToSvgTransformer;
+import one.pieringer.javaquery.plantuml.PlantUmlToFileWriter;
 import one.pieringer.javaquery.plantuml.PlantUmlTransformer;
 import one.pieringer.javaquery.plantuml.QueryRunner;
 import org.apache.commons.cli.*;
@@ -28,7 +28,8 @@ public class Main {
     private static final String OPTION_DATABASE_URI = "databaseUri";
     private static final String OPTION_STEREOTYPE = "stereotype";
     private static final String OPTION_STEREOTYPE_QUERY = "stereotypeQuery";
-    private static final String OPTION_OUT = "out";
+    private static final String OPTION_OUT_SVG = "outSvg";
+    private static final String OPTION_OUT_PDF = "outPdf";
 
     private static final Path EMBEDDED_DATABASE_DIRECTORY = Paths.get("database");
     private static final String EMBEDDED_DATABASE_NAME = "neo4j";
@@ -40,7 +41,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
         System.out.println("Args: " + Arrays.deepToString(args));
         final var analyzer = new Analyzer(new SourceCodeAnalyzerFactory());
-        final var queryRunner = new QueryRunner(new PlantUmlTransformer(), new PlantUmlToSvgTransformer());
+        final var queryRunner = new QueryRunner(new PlantUmlTransformer(), new PlantUmlToFileWriter());
         final var embeddedDatabase = new EmbeddedDatabase(EMBEDDED_DATABASE_DIRECTORY, EMBEDDED_DATABASE_NAME);
 
         final var main = new Main(analyzer, queryRunner, embeddedDatabase);
@@ -58,7 +59,8 @@ public class Main {
                 "The URI of the database that should be connected to. The embedded database is used if this parameter is omitted.");
         options.addOption(OPTION_STEREOTYPE, true, "The name of the stereotype that should be attached to certain classes.");
         options.addOption(OPTION_STEREOTYPE_QUERY, true, "The query that returns all classes to which the previous specified stereotype should be attached.");
-        options.addOption(OPTION_OUT, true, "The path where the generated diagram should be stored.");
+        options.addOption(OPTION_OUT_SVG, true, "The path where the generated SVG diagram should be stored.");
+        options.addOption(OPTION_OUT_PDF, true, "The path where the generated PDF diagram should be stored.");
         final CommandLineParser parser = new DefaultParser();
         final CommandLine cmd = parser.parse(options, args);
 
@@ -88,7 +90,8 @@ public class Main {
                 query,
                 stereotypeQueryMap,
                 cmd.getOptionValue(OPTION_DATABASE_URI, null),
-                cmd.getOptionValue(OPTION_OUT, null));
+                cmd.getOptionValue(OPTION_OUT_SVG, null),
+                cmd.getOptionValue(OPTION_OUT_PDF, null));
     }
 
 
@@ -122,7 +125,7 @@ public class Main {
             }
 
             if (commandLineOptions.query != null) {
-                queryRunner.runQuery(commandLineOptions.query, commandLineOptions.stereotypeQueries, graphPersistence, commandLineOptions.outPath);
+                queryRunner.runQuery(commandLineOptions.query, commandLineOptions.stereotypeQueries, graphPersistence, commandLineOptions.outSvgPath, commandLineOptions.outPdfPath);
             }
         } finally {
             sessionFactory.close();
@@ -149,19 +152,23 @@ public class Main {
         @CheckForNull
         final String databaseUri;
         @CheckForNull
-        final String outPath;
+        final String outSvgPath;
+        @CheckForNull
+        final String outPdfPath;
 
         public CommandLineOptions(final boolean doAnalyze, @Nonnull final List<String> sourceDirectories,
                                   @CheckForNull final String query,
                                   @Nonnull final HashMap<String, String> stereotypeQueries,
                                   @CheckForNull final String databaseUri,
-                                  @CheckForNull final String outPath) {
+                                  @CheckForNull final String outSvgPath,
+                                  @CheckForNull final String outPdfPath) {
             this.doAnalyze = doAnalyze;
             this.sourceDirectories = Objects.requireNonNull(sourceDirectories);
             this.query = query;
             this.stereotypeQueries = Objects.requireNonNull(stereotypeQueries);
             this.databaseUri = databaseUri;
-            this.outPath = outPath;
+            this.outSvgPath = outSvgPath;
+            this.outPdfPath = outPdfPath;
         }
     }
 }

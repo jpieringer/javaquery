@@ -26,8 +26,17 @@ dependencies {
     implementation("org.neo4j:neo4j-ogm-core:3.2.16")
     implementation("org.neo4j:neo4j-ogm-bolt-driver:3.2.16")
     implementation("org.neo4j:neo4j-ogm-bolt-native-types:3.2.16")
-
+    // PlantUml
     implementation(files("libs/plantuml-1.2020.14.jar"))
+    // PDF Export
+    runtimeOnly(files("libs/avalon-framework-4.2.0.jar",
+            "libs/batik-all-1.7.jar",
+            "libs/commons-io-1.3.1.jar",
+            "libs/commons-logging-1.0.4.jar",
+            "libs/fop.jar",
+            "libs/xml-apis-ext-1.3.04.jar",
+            "libs/xmlgraphics-commons-1.4.jar"))
+
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.8")
     implementation("commons-cli:commons-cli:1.4")
 }

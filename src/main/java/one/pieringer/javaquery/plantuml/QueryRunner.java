@@ -19,16 +19,17 @@ public class QueryRunner {
     @Nonnull
     final PlantUmlTransformer plantUmlTransformer;
     @Nonnull
-    final PlantUmlToSvgTransformer plantUmlToSvgTransformer;
+    final PlantUmlToFileWriter plantUmlToFileWriter;
 
     public QueryRunner(@Nonnull final PlantUmlTransformer plantUmlTransformer,
-                       @Nonnull final PlantUmlToSvgTransformer plantUmlToSvgTransformer) {
+                       @Nonnull final PlantUmlToFileWriter plantUmlToFileWriter) {
         this.plantUmlTransformer = Objects.requireNonNull(plantUmlTransformer);
-        this.plantUmlToSvgTransformer = Objects.requireNonNull(plantUmlToSvgTransformer);
+        this.plantUmlToFileWriter = Objects.requireNonNull(plantUmlToFileWriter);
     }
 
     public void runQuery(@Nonnull final String query, @Nonnull final HashMap<String, String> stereotypeQueries,
-                         @Nonnull final GraphPersistence graphPersistence, @CheckForNull String outPath) throws IOException {
+                         @Nonnull final GraphPersistence graphPersistence, @CheckForNull final String outSvgPath,
+                         @CheckForNull final String outPdfPath) throws IOException {
         Objects.requireNonNull(query);
         Objects.requireNonNull(graphPersistence);
 
@@ -36,14 +37,20 @@ public class QueryRunner {
 
         final ResultSet resultSet = graphPersistence.executeQuery(query);
         final Map<Type, List<String>> classToStereotypesMap = executeStereotypeQueries(stereotypeQueries, graphPersistence);
-
         final String plantUml = plantUmlTransformer.transform(resultSet, classToStereotypesMap);
-        if (outPath == null) {
-            outPath = OUTPUT_SVG;
-        }
-        plantUmlToSvgTransformer.generateSvg(plantUml, outPath);
 
         LOG.info("Finished query...");
+        LOG.info("Storing diagrams...");
+
+        if (outSvgPath != null) {
+            plantUmlToFileWriter.generateSvg(plantUml, outSvgPath);
+            LOG.info("Stored SVG.");
+        }
+        if (outPdfPath != null) {
+            plantUmlToFileWriter.generatePdf(plantUml, outPdfPath);
+            LOG.info("Stored PDF.");
+        }
+        LOG.info("Finished creating diagrams.");
     }
 
     @Nonnull

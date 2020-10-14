@@ -24,7 +24,8 @@ docker run \
  -query "MATCH (type:Type)-[r*0..1]->(otherType:Type) RETURN type, r, otherType" \
  -stereotype Toggleable -stereotypeQuery "MATCH (type:Type)-[r*0..1]->(otherType:Type) WHERE (type.fullyQualifiedName STARTS WITH 'com.salesmanager.shop.admin.controller.') RETURN type" \
  -databaseUri bolt://neo4j:7687 \
- -out /out/out.svg
+ -outSvg /out/out.svg
+ -outPdf /out/out.pdf
 ```
 
 ## Synopsis
@@ -51,8 +52,11 @@ The name of the stereotype that should be attached to certain classes.
 *-stereotypeQuery*
 The query that returns all classes to which the previous specified stereotype should be attached.
 
-*-out*
-The path where the generated diagram should be stored.
+*-outSvg*
+The path where the generated diagram as SVG should be stored.
+
+*-outPdf*
+The path where the generated diagram as PDF should be stored.
 
 ## Example invocations
 ```

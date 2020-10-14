@@ -9,12 +9,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Objects;
 
-public class PlantUmlToSvgTransformer {
+public class PlantUmlToFileWriter {
 
     public void generateSvg(@Nonnull final String plantUml, @Nonnull final String outputPath) throws IOException {
         Objects.requireNonNull(plantUml);
         Objects.requireNonNull(outputPath);
         SourceStringReader reader = new SourceStringReader(plantUml);
         reader.outputImage(new FileOutputStream(outputPath), new FileFormatOption(FileFormat.SVG));
+    }
+
+    public void generatePdf(@Nonnull final String plantUml, @Nonnull final String outputPath) throws IOException {
+        Objects.requireNonNull(plantUml);
+        Objects.requireNonNull(outputPath);
+        SourceStringReader reader = new SourceStringReader(plantUml);
+        reader.outputImage(new FileOutputStream(outputPath), new FileFormatOption(FileFormat.PDF));
     }
 }
