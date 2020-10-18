@@ -3,6 +3,7 @@ package one.pieringer.javaquery.plantuml;
 import one.pieringer.javaquery.database.GraphPersistence;
 import one.pieringer.javaquery.database.ResultSet;
 import one.pieringer.javaquery.model.Type;
+import org.apache.batik.transcoder.TranscoderException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -29,7 +30,7 @@ public class QueryRunner {
 
     public void runQuery(@Nonnull final String query, @Nonnull final HashMap<String, String> stereotypeQueries,
                          @Nonnull final GraphPersistence graphPersistence, @CheckForNull final String outSvgPath,
-                         @CheckForNull final String outPdfPath) throws IOException {
+                         @CheckForNull final String outPdfPath) throws IOException, TranscoderException {
         Objects.requireNonNull(query);
         Objects.requireNonNull(graphPersistence);
 
@@ -43,13 +44,9 @@ public class QueryRunner {
         LOG.info("Storing diagrams...");
 
         if (outSvgPath != null) {
-            plantUmlToFileWriter.generateSvg(plantUml, outSvgPath);
-            LOG.info("Stored SVG.");
+            plantUmlToFileWriter.generateDiagrams(plantUml, outSvgPath, outPdfPath);
         }
-        if (outPdfPath != null) {
-            plantUmlToFileWriter.generatePdf(plantUml, outPdfPath);
-            LOG.info("Stored PDF.");
-        }
+
         LOG.info("Finished creating diagrams.");
     }
 

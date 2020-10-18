@@ -7,6 +7,7 @@ import one.pieringer.javaquery.database.GraphPersistence;
 import one.pieringer.javaquery.plantuml.PlantUmlToFileWriter;
 import one.pieringer.javaquery.plantuml.PlantUmlTransformer;
 import one.pieringer.javaquery.plantuml.QueryRunner;
+import org.apache.batik.transcoder.TranscoderException;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -115,7 +116,8 @@ public class Main {
     }
 
 
-    private void performWork(@Nonnull final CommandLineOptions commandLineOptions, @Nonnull final String databaseUri) throws IOException {
+    private void performWork(@Nonnull final CommandLineOptions commandLineOptions, @Nonnull final String databaseUri)
+            throws IOException, TranscoderException {
         final SessionFactory sessionFactory = setupDatabase(databaseUri);
         final GraphPersistence graphPersistence = new GraphPersistence(sessionFactory);
 
@@ -125,7 +127,8 @@ public class Main {
             }
 
             if (commandLineOptions.query != null) {
-                queryRunner.runQuery(commandLineOptions.query, commandLineOptions.stereotypeQueries, graphPersistence, commandLineOptions.outSvgPath, commandLineOptions.outPdfPath);
+                queryRunner.runQuery(commandLineOptions.query, commandLineOptions.stereotypeQueries, graphPersistence,
+                        commandLineOptions.outSvgPath, commandLineOptions.outPdfPath);
             }
         } finally {
             sessionFactory.close();
