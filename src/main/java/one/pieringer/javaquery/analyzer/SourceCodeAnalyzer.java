@@ -71,8 +71,10 @@ public class SourceCodeAnalyzer {
                 if (fullyQualifiedName != null) {
                     resultSetBuilder.addCreateInstanceRelationship(new CreateInstanceRelationship(typeSet.getOrCreateType(containingType), typeSet.getOrCreateType(fullyQualifiedName)));
                 }
-            } catch (UnsolvedSymbolException | UnsupportedOperationException e) {   // Don't know why the UnsupportedOperationException is thrown.
+            } catch (UnsolvedSymbolException e) {
                 LOG.debug("Cannot resolve {} in {}.", type, containingType);
+            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+                LOG.debug("UnsupportedOperationException during getting the type for " + type.asString(), e);
             }
         }
 
@@ -95,8 +97,10 @@ public class SourceCodeAnalyzer {
                         resultSetBuilder.addFieldRelationship(new FieldRelationship(typeSet.getOrCreateType(containingType), variableDeclarator.getNameAsString(), typeSet.getOrCreateType(fullyQualifiedName)));
                     }
                 }
-            } catch (UnsolvedSymbolException | UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+            } catch (UnsolvedSymbolException e) {
                 LOG.debug("Cannot resolve {} in {}.", type, containingType);
+            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+                LOG.debug("UnsupportedOperationException during getting the type for " + type.asString(), e);
             }
         }
 
@@ -117,8 +121,10 @@ public class SourceCodeAnalyzer {
                     if (fullyQualifiedName != null) {
                         resultSetBuilder.addInheritanceRelationship(new InheritanceRelationship(typeSet.getOrCreateType(containingType), typeSet.getOrCreateType(fullyQualifiedName)));
                     }
-                } catch (UnsolvedSymbolException | UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+                } catch (UnsolvedSymbolException e) {
                     LOG.debug("Cannot resolve {} in {}.", type, containingType);
+                } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+                    LOG.debug("UnsupportedOperationException during getting the type for " + type.asString(), e);
                 }
             }
         }
@@ -138,7 +144,7 @@ public class SourceCodeAnalyzer {
             try {
                 fullyQualifiedName = n.getScope().get().calculateResolvedType().describe();
             } catch (RuntimeException e) {    // Don't know why the RuntimeException is thrown.
-                LOG.debug("Cannot resolve {} in {}.", n, containingType);
+                LOG.debug("Got a RuntimeException " + n + " in " + containingType + ".", e);
                 return;
             }
 
@@ -156,7 +162,7 @@ public class SourceCodeAnalyzer {
             try {
                 valueDeclaration = n.resolve();
             } catch (RuntimeException e) {
-                LOG.debug("Cannot resolve {} in {}.", n, containingType);
+                LOG.debug("Got a RuntimeException " + n + " in " + containingType + ".", e);
                 return;
             }
 
@@ -171,8 +177,10 @@ public class SourceCodeAnalyzer {
                     }
                 }
 
-            } catch (UnsolvedSymbolException | UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+            } catch (UnsolvedSymbolException e) {
                 LOG.debug("Cannot resolve {} in {}.", valueDeclaration, containingType);
+            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+                LOG.debug("UnsupportedOperationException during getting the type for " + valueDeclaration.toString(), e);
             }
         }
     }
