@@ -89,21 +89,8 @@ public class ResultSet {
         }
 
         @Nonnull
-        public ResultSetBuilder addCreateInstanceRelationships(@Nonnull final Set<CreateInstanceRelationship> createInstanceRelationships) {
-            this.createInstanceRelationships.addAll(createInstanceRelationships);
-            return this;
-        }
-
-        @Nonnull
         public ResultSetBuilder addFieldRelationship(@Nonnull final FieldRelationship fieldRelationship) {
             fieldRelationships.add(Objects.requireNonNull(fieldRelationship));
-            return this;
-        }
-
-
-        @Nonnull
-        public ResultSetBuilder addFieldRelationships(@Nonnull final Set<FieldRelationship> fieldRelationships) {
-            this.fieldRelationships.addAll(Objects.requireNonNull(fieldRelationships));
             return this;
         }
 
@@ -114,20 +101,8 @@ public class ResultSet {
         }
 
         @Nonnull
-        public ResultSetBuilder addInheritanceRelationships(@Nonnull Set<InheritanceRelationship> inheritanceRelationships) {
-            this.inheritanceRelationships.addAll(Objects.requireNonNull(inheritanceRelationships));
-            return this;
-        }
-
-        @Nonnull
         public ResultSetBuilder addInvokeRelationship(@Nonnull final InvokeRelationship invokeRelationship) {
             invokeRelationships.add(Objects.requireNonNull(invokeRelationship));
-            return this;
-        }
-
-        @Nonnull
-        public ResultSetBuilder addInvokeRelationships(@Nonnull Set<InvokeRelationship> invokeRelationships) {
-            this.invokeRelationships.addAll(Objects.requireNonNull(invokeRelationships));
             return this;
         }
 
@@ -136,13 +111,6 @@ public class ResultSet {
             this.accessFieldRelationships.add(Objects.requireNonNull(accessFieldRelationship));
             return this;
         }
-
-        @Nonnull
-        public ResultSetBuilder addAccessFieldRelationships(@Nonnull final Set<AccessFieldRelationship> accessFieldRelationships) {
-            this.accessFieldRelationships.addAll(Objects.requireNonNull(accessFieldRelationships));
-            return this;
-        }
-
 
         @Nonnull
         public ResultSetBuilder addType(@Nonnull final Type type) {
