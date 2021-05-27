@@ -27,11 +27,8 @@ public class GraphPersistence {
 
     public void clear() {
         Session session = sessionFactory.openSession();
-        session.deleteAll(Type.class);
-        session.deleteAll(CreateInstanceRelationship.class);
-        session.deleteAll(FieldRelationship.class);
-        session.deleteAll(InheritanceRelationship.class);
-        session.deleteAll(AccessFieldRelationship.class);
+        session.query("MATCH ()-[r]->() DELETE r", new HashMap<>());
+        session.query("MATCH (n) DELETE n", new HashMap<>());
     }
 
     public ResultSet executeQuery(@Nonnull final String query) {
