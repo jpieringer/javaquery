@@ -43,7 +43,7 @@ public class QueryRunner {
         LOG.info("Finished query...");
         LOG.info("Storing diagrams...");
 
-        if (outSvgPath != null) {
+        if (outSvgPath != null || outPdfPath != null) {
             plantUmlToFileWriter.generateDiagrams(plantUml, outSvgPath, outPdfPath);
         }
 
