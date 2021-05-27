@@ -2,13 +2,22 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     id("java")
-    id("com.github.johnrengelman.shadow") version "6.0.0"
+    id("com.github.johnrengelman.shadow") version "7.0.0"
     id("com.palantir.docker") version "0.22.1"
 }
 
 repositories {
     mavenCentral()
     maven(url = "https://repository.jboss.org/nexus/content/repositories/thirdparty-releases/")
+}
+
+sourceSets {
+    create("integrationTest") {
+        java {
+            compileClasspath += sourceSets["main"].output + configurations["testRuntimeClasspath"]
+            runtimeClasspath += output + compileClasspath + sourceSets["test"].runtimeClasspath
+        }
+    }
 }
 
 dependencies {
@@ -38,8 +47,8 @@ dependencies {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_14
-    targetCompatibility = JavaVersion.VERSION_14
+    sourceCompatibility = JavaVersion.VERSION_16
+    targetCompatibility = JavaVersion.VERSION_16
 }
 
 tasks {
@@ -53,6 +62,19 @@ tasks {
 
     build {
         dependsOn(shadowJar)
+    }
+
+
+    val integrationTest = register<Test>("integrationTest") {
+        description = "Runs the integration tests"
+        group = "verification"
+        testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+        classpath = sourceSets["integrationTest"].runtimeClasspath
+        mustRunAfter(test)
+    }
+
+    check {
+        dependsOn(integrationTest)
     }
 
     named<DefaultTask>("docker") {
