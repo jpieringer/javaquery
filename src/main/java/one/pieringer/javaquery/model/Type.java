@@ -39,7 +39,7 @@ public class Type {
 
     public Type(@Nonnull final String fullyQualifiedName) {
         this.fullyQualifiedName = Objects.requireNonNull(fullyQualifiedName);
-        this.name = StringUtils.substringAfterLast(fullyQualifiedName, ".");
+        this.name = StringUtils.substringAfterLast(StringUtils.substringBefore(fullyQualifiedName, "<"), ".");
     }
 
     @Nonnull
