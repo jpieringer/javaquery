@@ -69,6 +69,10 @@ public class SourceCodeAnalyzer {
             try {
                 final ElementNames createdType = javaParserWrapper.getSimplifiedType(expr.getType());
 
+                if (createdType == null) {
+                    return;
+                }
+
                 final ResolvedConstructorDeclaration resolvedConstructorDeclaration = expr.resolve();
                 final List<ElementNames> parameterTypes = new ArrayList<>(resolvedConstructorDeclaration.getNumberOfParams());
                 for (int i = 0; i < resolvedConstructorDeclaration.getNumberOfParams(); ++i) {
@@ -93,7 +97,7 @@ public class SourceCodeAnalyzer {
                     throw new AssertionError("No parent method and no parent field declaration found.");
                 }
             } catch (UnsolvedSymbolException e) {
-                LOG.debug("Cannot resolve {} in {}.", expr.getType(), containingType);
+                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
             } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
                 LOG.debug("UnsupportedOperationException during getting the type for " + expr.getType().asString(), e);
             }
@@ -109,7 +113,6 @@ public class SourceCodeAnalyzer {
             Objects.requireNonNull(n);
 
             final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
-            graphBuilder.addType(containingType);
 
             if (n.getVariables().getFirst().isEmpty()) {
                 return;
@@ -131,7 +134,7 @@ public class SourceCodeAnalyzer {
                     graphBuilder.addOfTypeRelationship(field, fieldType);
                 }
             } catch (UnsolvedSymbolException e) {
-                LOG.debug("Cannot resolve {} in {}.", n.getVariables().getFirst().get().getType(), containingType);
+                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
             } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
                 LOG.debug("UnsupportedOperationException during getting the type for " + n.getVariables().getFirst().get().getType(), e);
             }
@@ -145,6 +148,30 @@ public class SourceCodeAnalyzer {
             fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
             super.visit(n, ignored);
             addFieldInitializationCallsToTheConstructors(declaredType, fieldInitializationStorageMap.remove(declaredType));
+        }
+
+        private void performVisit(final ClassOrInterfaceDeclaration n) {
+            Objects.requireNonNull(n);
+
+            final ElementNames declaredType = new ElementNames(n.getFullyQualifiedName().orElseThrow(), n.getNameAsString());
+            graphBuilder.addType(declaredType);
+
+            for (ClassOrInterfaceType type : Iterables.concat(n.getExtendedTypes(), n.getImplementedTypes())) {
+                try {
+                    final ElementNames superType = javaParserWrapper.getSimplifiedType(type);
+                    if (superType == null) {
+                        LOG.debug("Cannot resolve {} in {}.", type, declaredType.fullyQualified());
+                        return;
+                    }
+
+                    graphBuilder.addType(superType);
+                    graphBuilder.addInheritsRelationship(declaredType, superType);
+                } catch (UnsolvedSymbolException e) {
+                    LOG.debug("Symbol resolving failed in {}. Ignoring it.", declaredType.fullyQualified());
+                } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+                    LOG.debug("UnsupportedOperationException during getting the type for " + type.asString(), e);
+                }
+            }
         }
 
         /**
@@ -181,30 +208,6 @@ public class SourceCodeAnalyzer {
             }
         }
 
-        private void performVisit(final ClassOrInterfaceDeclaration n) {
-            Objects.requireNonNull(n);
-
-            final ElementNames declaredType = new ElementNames(n.getFullyQualifiedName().orElseThrow(), n.getNameAsString());
-            graphBuilder.addType(declaredType);
-
-            for (ClassOrInterfaceType type : Iterables.concat(n.getExtendedTypes(), n.getImplementedTypes())) {
-                try {
-                    final ElementNames superType = javaParserWrapper.getSimplifiedType(type);
-                    if (superType == null) {
-                        LOG.debug("Cannot resolve {} in {}.", type, declaredType.fullyQualified());
-                        return;
-                    }
-
-                    graphBuilder.addType(superType);
-                    graphBuilder.addInheritsRelationship(declaredType, superType);
-                } catch (UnsolvedSymbolException e) {
-                    LOG.debug("Cannot resolve {} in {}.", type, declaredType.fullyQualified());
-                } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                    LOG.debug("UnsupportedOperationException during getting the type for " + type.asString(), e);
-                }
-            }
-        }
-
         @Override
         public void visit(EnumDeclaration n, Void arg) {
             performVisit(n);
@@ -232,31 +235,36 @@ public class SourceCodeAnalyzer {
                 return; // The scope is null for e.g. static import method calls
             }
 
-            final ResolvedMethodDeclaration resolvedMethodDeclaration = n.resolve();
-            final List<ElementNames> parameterTypes = new ArrayList<>(resolvedMethodDeclaration.getNumberOfParams());
-            for (int i = 0; i < resolvedMethodDeclaration.getNumberOfParams(); ++i) {
-                parameterTypes.add(javaParserWrapper.getExactType(resolvedMethodDeclaration.getParam(i).getType()));
-            }
-            ElementNames declaringType = new ElementNames(resolvedMethodDeclaration.declaringType().getQualifiedName(), resolvedMethodDeclaration.declaringType().getName());
-            ElementNames method = FullyQualifiedNameUtils.getMethodName(declaringType, resolvedMethodDeclaration.getName(), parameterTypes);
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
 
-            graphBuilder.addType(declaringType);
-            graphBuilder.addMethod(method);
-            graphBuilder.addHasMethodRelationship(declaringType, method);
+            try {
+                final ResolvedMethodDeclaration resolvedMethodDeclaration = n.resolve();
+                final List<ElementNames> parameterTypes = new ArrayList<>(resolvedMethodDeclaration.getNumberOfParams());
+                for (int i = 0; i < resolvedMethodDeclaration.getNumberOfParams(); ++i) {
+                    parameterTypes.add(javaParserWrapper.getExactType(resolvedMethodDeclaration.getParam(i).getType()));
+                }
+                ElementNames declaringType = new ElementNames(resolvedMethodDeclaration.declaringType().getQualifiedName(), resolvedMethodDeclaration.declaringType().getName());
+                ElementNames method = FullyQualifiedNameUtils.getMethodName(declaringType, resolvedMethodDeclaration.getName(), parameterTypes);
 
-            final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n);
-            if (parentNamedCallable != null) {
-                graphBuilder.addInvokeRelationship(parentNamedCallable, method);
-                return;
-            }
+                graphBuilder.addType(declaringType);
+                graphBuilder.addMethod(method);
+                graphBuilder.addHasMethodRelationship(declaringType, method);
 
-            if (javaParserWrapper.isInFieldDeclaration(n)) {
-                fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(n)).addInvokedMethod(method);
-            } else {
-                throw new AssertionError("No parent method and no parent field declaration found.");
+                final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n);
+                if (parentNamedCallable != null) {
+                    graphBuilder.addInvokeRelationship(parentNamedCallable, method);
+                    return;
+                }
+
+                if (javaParserWrapper.isInFieldDeclaration(n)) {
+                    fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(n)).addInvokedMethod(method);
+                } else {
+                    throw new AssertionError("No parent method and no parent field declaration found.");
+                }
+            } catch (UnsolvedSymbolException e) {
+                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
             }
         }
-
 
         @Override
         public void visit(FieldAccessExpr n, Void arg) {
@@ -272,6 +280,9 @@ public class SourceCodeAnalyzer {
             ResolvedValueDeclaration valueDeclaration;
             try {
                 valueDeclaration = n.resolve();
+            } catch (UnsolvedSymbolException e) {
+                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
+                return;
             } catch (RuntimeException e) {
                 LOG.debug("Got a RuntimeException " + n + " in " + containingType + ".", e);
                 return;
@@ -307,7 +318,7 @@ public class SourceCodeAnalyzer {
                     }
                 }
             } catch (UnsolvedSymbolException e) {
-                LOG.debug("Cannot resolve {} in {}.", valueDeclaration, containingType);
+                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
             } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
                 LOG.debug("UnsupportedOperationException during getting the type for " + valueDeclaration.toString(), e);
             }
@@ -323,13 +334,16 @@ public class SourceCodeAnalyzer {
             Objects.requireNonNull(n);
 
             final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
-            graphBuilder.addType(containingType);
 
-            final List<ElementNames> parameterTypes = javaParserWrapper.getParameterTypes(n.getParameters());
-            final ElementNames constructor = FullyQualifiedNameUtils.getConstructorName(containingType, parameterTypes);
-            graphBuilder.addConstructor(constructor);
-            graphBuilder.addHasConstructorRelationship(containingType, constructor);
-            fieldInitializationStorageMap.get(containingType).addConstructor(constructor);
+            try {
+                final List<ElementNames> parameterTypes = javaParserWrapper.getParameterTypes(n.getParameters());
+                final ElementNames constructor = FullyQualifiedNameUtils.getConstructorName(containingType, parameterTypes);
+                graphBuilder.addConstructor(constructor);
+                graphBuilder.addHasConstructorRelationship(containingType, constructor);
+                fieldInitializationStorageMap.get(containingType).addConstructor(constructor);
+            } catch (UnsolvedSymbolException e) {
+                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
+            }
         }
 
         @Override
@@ -343,12 +357,15 @@ public class SourceCodeAnalyzer {
             Objects.requireNonNull(n);
 
             final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
-            graphBuilder.addType(containingType);
 
-            final List<ElementNames> parameterTypes = javaParserWrapper.getParameterTypes(n.getParameters());
-            final ElementNames method = FullyQualifiedNameUtils.getMethodName(containingType, n.getNameAsString(), parameterTypes);
-            graphBuilder.addMethod(method);
-            graphBuilder.addHasMethodRelationship(containingType, method);
+            try {
+                final List<ElementNames> parameterTypes = javaParserWrapper.getParameterTypes(n.getParameters());
+                final ElementNames method = FullyQualifiedNameUtils.getMethodName(containingType, n.getNameAsString(), parameterTypes);
+                graphBuilder.addMethod(method);
+                graphBuilder.addHasMethodRelationship(containingType, method);
+            } catch (UnsolvedSymbolException e) {
+                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
+            }
         }
     }
 }
