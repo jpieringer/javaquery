@@ -8,7 +8,7 @@ import java.util.Objects;
 
 @RelationshipEntity(type = InvokeRelationship.TYPE)
 public class InvokeRelationship {
-    public static final String TYPE = "INVOKES";
+    public static final String TYPE = "INVOKE";
 
     @Id
     @GeneratedValue
@@ -16,14 +16,11 @@ public class InvokeRelationship {
 
     @StartNode
     @Nonnull
-    private final Type containingType;
-
-    @Nonnull
-    private final String invokedMethod;
+    private final Executable invokingExecutable;
 
     @EndNode
     @Nonnull
-    private final Type invokedType;
+    private final Executable invokedExecutable;
 
     /**
      * This constructor is only used by Neo4J
@@ -31,38 +28,30 @@ public class InvokeRelationship {
     @Deprecated
     @SuppressWarnings("ConstantConditions")
     public InvokeRelationship() {
-        this.containingType = null;
-        this.invokedType = null;
-        this.invokedMethod = "not initialized";
+        this.invokingExecutable = null;
+        this.invokedExecutable = null;
     }
 
-    public InvokeRelationship(@Nonnull final Type containingType, @Nonnull final String invokedMethod, @Nonnull final Type invokedType) {
-        this.containingType = Objects.requireNonNull(containingType);
-        this.invokedMethod = Objects.requireNonNull(invokedMethod);
-        this.invokedType = Objects.requireNonNull(invokedType);
-    }
-
-    @Nonnull
-    public Type getContainingType() {
-        return containingType;
+    public InvokeRelationship(@Nonnull final Executable invokingExecutable, @Nonnull final Executable invokedExecutable) {
+        this.invokingExecutable = Objects.requireNonNull(invokingExecutable);
+        this.invokedExecutable = Objects.requireNonNull(invokedExecutable);
     }
 
     @Nonnull
-    public String getInvokedMethod() {
-        return invokedMethod;
+    public Executable getInvokingExecutable() {
+        return invokingExecutable;
     }
 
     @Nonnull
-    public Type getInvokedType() {
-        return invokedType;
+    public Executable getInvokedExecutable() {
+        return invokedExecutable;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("containingType", containingType)
-                .add("invokedMethod", invokedMethod)
-                .add("invokedType", invokedType)
+                .add("containingType", invokingExecutable)
+                .add("invokedType", invokedExecutable)
                 .toString();
     }
 
@@ -71,13 +60,12 @@ public class InvokeRelationship {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         InvokeRelationship fieldRelationship = (InvokeRelationship) o;
-        return containingType.equals(fieldRelationship.containingType) &&
-                invokedMethod.equals(fieldRelationship.invokedMethod) &&
-                invokedType.equals(fieldRelationship.invokedType);
+        return invokingExecutable.equals(fieldRelationship.invokingExecutable) &&
+                invokedExecutable.equals(fieldRelationship.invokedExecutable);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(containingType, invokedMethod, invokedType);
+        return Objects.hash(invokingExecutable, invokedExecutable);
     }
 }

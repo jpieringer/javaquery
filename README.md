@@ -71,45 +71,82 @@ A graph data base (Neo4J) is used to store the simplified AST. It contains the f
 
 ### Nodes
 #### Type
-A java class.
+A java class/interface/enum.
 
 Properties:
 - *name*: The simple name like `HashMap`.
 - *qualifiedName*: The fully qualified name like `java.util.HashMap`.
 
+#### Constructor
+A constructor of a class.
+
+Properties:
+- *name*: The simple name like `<init>(String)`.
+- *qualifiedName*: The fully qualified name like `pkg.HashMap.<init>(java.lang.String)`.
+
+#### Method
+A method of a class.
+
+Properties:
+- *name*: The simple name like `do(String)`.
+- *qualifiedName*: The fully qualified name like `pkg.HashMap.do(java.lang.String)`.
+
+#### Field
+A field of a class.
+
+Properties:
+- *name*: The simple name like `isRed`.
+- *qualifiedName*: The fully qualified name like `pkg.HashMap.isRed`.
+
 ### Relationships
-#### INVOKES
-Describes that any code within a class invokes any method of another class.
+#### ACCESS
+Describes that a method accesses a field.
 
-*from*: The type that contains the code that performs the invocation.
-*to*: The type that gets invoked.
-*invokedMethod*: The name of the method that is invoked.
+*accessingExecutable*: The method/constructor that contains the code that performs field access.
+*field*: The field that gets accessed.
 
-### INHERITS
-Describes that a type inherits another type (class or interface).
-
-*From*: The sub type.
-*To*: The type that is inherited.
-
-### HAS_FIELD
-Describes that a type has a field of another type.
-
-*from*: The type that has the field.
-*to*: The type of the field.
-*fieldName*: The name of the field that is invoked.
- 
-### CREATE_INSTANCE
+#### CREATE_INSTANCE
 Describes that any code within a class creates an instance of another class.
 
-*from*: The type that contains the code that performs create instance operation.
-*to*: The type of the object that gets created.
+*invokingExecutable*: The method/constructor that contains the code that performs create instance operation.
+*invokedConstructor*: The constructor of the object that gets instantiated.
 
-### ACCESS_FIELD
-Describes that any code within a class access a field of another class.
+#### HAS_CONSTRUCTOR
+Describes that a given class has a constructor
 
-*from*: The type that contains the code that performs field access.
-*to*: The type of the object that contains the field that gets access.
-*fieldName*: The name of the field that is accessed.
+*declaringType*: The type that is created by this constructor. 
+*constructor*: The constructor.
+
+#### HAS_FIELD
+Describes that a type has a field.
+
+*declaringType*: The type that has the field.
+*field*: The field itself.
+
+#### HAS_METHOD
+Describes that a given class has a method
+
+*declaringType*: The type that has the method defined.
+*method*: The method.
+
+#### INHERITS
+Describes that a type inherits another type (class or interface).
+
+*subType*: The sub type.
+*superType*: The type that is inherited.
+
+#### INVOKE
+Describes that any method/constructor is invokes within any other method.
+
+*invokingExecutable*: The type that contains the code that performs the invocation.
+*invokedExecutable*: The type that gets invoked.
+
+#### OF_TYPE
+Describes that a field is of a given type.
+
+*field*: The field for which the type is specified.
+*fieldType*: The type of the field.
+
 
 ## Future work
 * Consider an alternative java parser: http://spoon.gforge.inria.fr/

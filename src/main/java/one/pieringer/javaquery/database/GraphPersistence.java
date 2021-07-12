@@ -53,14 +53,12 @@ public class GraphPersistence {
     private void fillResultSetBuilder(Object entry, ResultSet.ResultSetBuilder resultSetBuilder) {
         if (entry instanceof CreateInstanceRelationship) {
             resultSetBuilder.addCreateInstanceRelationship((CreateInstanceRelationship) entry);
-        } else if (entry instanceof FieldRelationship) {
-            resultSetBuilder.addFieldRelationship((FieldRelationship) entry);
         } else if (entry instanceof InheritanceRelationship) {
             resultSetBuilder.addInheritanceRelationship((InheritanceRelationship) entry);
         } else if (entry instanceof InvokeRelationship) {
             resultSetBuilder.addInvokeRelationship((InvokeRelationship) entry);
-        } else if (entry instanceof AccessFieldRelationship) {
-            resultSetBuilder.addAccessFieldRelationship((AccessFieldRelationship) entry);
+        } else if (entry instanceof AccessRelationship) {
+            resultSetBuilder.addAccessFieldRelationship((AccessRelationship) entry);
         } else if (entry instanceof Type) {
             resultSetBuilder.addType((Type) entry);
         } else if (entry instanceof Collection) {

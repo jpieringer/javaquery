@@ -6,6 +6,7 @@ import org.neo4j.ogm.annotation.*;
 import javax.annotation.Nonnull;
 import java.util.Objects;
 
+// TODO do we really need a separate relationship for this or could we use the regular INVOKE relationship?
 @RelationshipEntity(type = CreateInstanceRelationship.TYPE)
 public class CreateInstanceRelationship {
 
@@ -17,11 +18,11 @@ public class CreateInstanceRelationship {
 
     @StartNode
     @Nonnull
-    private final Type containingType;
+    private final Executable invokingExecutable;
 
     @EndNode
     @Nonnull
-    private final Type objectType;
+    private final Constructor invokedConstructor;
 
     /**
      * This constructor is only used by Neo4J
@@ -29,30 +30,30 @@ public class CreateInstanceRelationship {
     @Deprecated
     @SuppressWarnings("ConstantConditions")
     public CreateInstanceRelationship() {
-        this.containingType = null;
-        this.objectType = null;
+        this.invokingExecutable = null;
+        this.invokedConstructor = null;
     }
 
-    public CreateInstanceRelationship(@Nonnull Type containingType, @Nonnull Type objectType) {
-        this.containingType = Objects.requireNonNull(containingType);
-        this.objectType = Objects.requireNonNull(objectType);
-    }
-
-    @Nonnull
-    public Type getContainingType() {
-        return containingType;
+    public CreateInstanceRelationship(@Nonnull Executable invokingExecutable, @Nonnull Constructor invokedConstructor) {
+        this.invokingExecutable = Objects.requireNonNull(invokingExecutable);
+        this.invokedConstructor = Objects.requireNonNull(invokedConstructor);
     }
 
     @Nonnull
-    public Type getObjectType() {
-        return objectType;
+    public Executable getInvokingExecutable() {
+        return invokingExecutable;
+    }
+
+    @Nonnull
+    public Constructor getInvokedConstructor() {
+        return invokedConstructor;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("containingType", containingType)
-                .add("objectType", objectType)
+                .add("invokingExecutable", invokingExecutable)
+                .add("invokedConstructor", invokedConstructor)
                 .toString();
     }
 
@@ -61,12 +62,12 @@ public class CreateInstanceRelationship {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CreateInstanceRelationship fieldRelationship = (CreateInstanceRelationship) o;
-        return containingType.equals(fieldRelationship.containingType) &&
-                objectType.equals(fieldRelationship.objectType);
+        return invokingExecutable.equals(fieldRelationship.invokingExecutable) &&
+                invokedConstructor.equals(fieldRelationship.invokedConstructor);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(containingType, objectType);
+        return Objects.hash(invokingExecutable, invokedConstructor);
     }
 }

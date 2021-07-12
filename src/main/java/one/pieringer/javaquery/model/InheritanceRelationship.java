@@ -33,7 +33,7 @@ public class InheritanceRelationship {
         this.superType = null;
     }
 
-    public InheritanceRelationship(@Nonnull Type subType, @Nonnull Type superType) {
+    public InheritanceRelationship(@Nonnull final Type subType, @Nonnull final Type superType) {
         this.subType = Objects.requireNonNull(subType);
         this.superType = Objects.requireNonNull(superType);
     }
@@ -51,7 +51,6 @@ public class InheritanceRelationship {
     @Override
     public String toString() {
         return "InheritanceRelationship{" +
-                "relationshipId=" + relationshipId +
                 ", subType=" + subType +
                 ", superType=" + superType +
                 '}';

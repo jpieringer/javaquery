@@ -11,38 +11,29 @@ public class ResultSet {
     @Nonnull
     final Set<CreateInstanceRelationship> createInstanceRelationships;
     @Nonnull
-    final Set<FieldRelationship> fieldRelationships;
-    @Nonnull
     final Set<InheritanceRelationship> inheritanceRelationships;
     @Nonnull
     final Set<InvokeRelationship> invokeRelationships;
     @Nonnull
-    final Set<AccessFieldRelationship> accessFieldRelationships;
+    final Set<AccessRelationship> accessRelationships;
     @Nonnull
     final Set<Type> types;
 
     public ResultSet(@Nonnull final Set<CreateInstanceRelationship> createInstanceRelationships,
-                     @Nonnull final Set<FieldRelationship> fieldRelationships,
                      @Nonnull final Set<InheritanceRelationship> inheritanceRelationships,
                      @Nonnull final Set<InvokeRelationship> invokeRelationships,
-                     @Nonnull final Set<AccessFieldRelationship> accessFieldRelationships,
+                     @Nonnull final Set<AccessRelationship> accessRelationships,
                      @Nonnull final Set<Type> types) {
         this.createInstanceRelationships = Objects.requireNonNull(createInstanceRelationships);
-        this.fieldRelationships = Objects.requireNonNull(fieldRelationships);
         this.inheritanceRelationships = Objects.requireNonNull(inheritanceRelationships);
         this.invokeRelationships = Objects.requireNonNull(invokeRelationships);
-        this.accessFieldRelationships = Objects.requireNonNull(accessFieldRelationships);
+        this.accessRelationships = Objects.requireNonNull(accessRelationships);
         this.types = Objects.requireNonNull(types);
     }
 
     @Nonnull
     public Set<CreateInstanceRelationship> getCreateInstanceRelationships() {
         return createInstanceRelationships;
-    }
-
-    @Nonnull
-    public Set<FieldRelationship> getFieldRelationships() {
-        return fieldRelationships;
     }
 
     @Nonnull
@@ -56,8 +47,8 @@ public class ResultSet {
     }
 
     @Nonnull
-    public Set<AccessFieldRelationship> getAccessFieldRelationships() {
-        return accessFieldRelationships;
+    public Set<AccessRelationship> getAccessFieldRelationships() {
+        return accessRelationships;
     }
 
     @Nonnull
@@ -69,13 +60,11 @@ public class ResultSet {
         @Nonnull
         private final Set<CreateInstanceRelationship> createInstanceRelationships = new HashSet<>();
         @Nonnull
-        private final Set<FieldRelationship> fieldRelationships = new HashSet<>();
-        @Nonnull
         private final Set<InheritanceRelationship> inheritanceRelationships = new HashSet<>();
         @Nonnull
         private final Set<InvokeRelationship> invokeRelationships = new HashSet<>();
         @Nonnull
-        private final Set<AccessFieldRelationship> accessFieldRelationships = new HashSet<>();
+        private final Set<AccessRelationship> accessRelationships = new HashSet<>();
         @Nonnull
         private final Set<Type> types = new HashSet<>();
 
@@ -85,12 +74,6 @@ public class ResultSet {
         @Nonnull
         public ResultSetBuilder addCreateInstanceRelationship(@Nonnull final CreateInstanceRelationship createInstanceRelationship) {
             createInstanceRelationships.add(Objects.requireNonNull(createInstanceRelationship));
-            return this;
-        }
-
-        @Nonnull
-        public ResultSetBuilder addFieldRelationship(@Nonnull final FieldRelationship fieldRelationship) {
-            fieldRelationships.add(Objects.requireNonNull(fieldRelationship));
             return this;
         }
 
@@ -107,8 +90,8 @@ public class ResultSet {
         }
 
         @Nonnull
-        public ResultSetBuilder addAccessFieldRelationship(@Nonnull final AccessFieldRelationship accessFieldRelationship) {
-            this.accessFieldRelationships.add(Objects.requireNonNull(accessFieldRelationship));
+        public ResultSetBuilder addAccessFieldRelationship(@Nonnull final AccessRelationship accessRelationship) {
+            this.accessRelationships.add(Objects.requireNonNull(accessRelationship));
             return this;
         }
 
@@ -125,7 +108,7 @@ public class ResultSet {
         }
 
         public ResultSet build() {
-            return new ResultSet(createInstanceRelationships, fieldRelationships, inheritanceRelationships, invokeRelationships, accessFieldRelationships, types);
+            return new ResultSet(createInstanceRelationships, inheritanceRelationships, invokeRelationships, accessRelationships, types);
         }
     }
 }

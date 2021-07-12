@@ -1,7 +1,6 @@
 package one.pieringer.javaquery.analyzer;
 
 import one.pieringer.javaquery.database.GraphPersistence;
-import one.pieringer.javaquery.database.ResultSet;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -10,6 +9,7 @@ import javax.annotation.Nonnull;
 import java.io.File;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -30,19 +30,14 @@ public class Analyzer {
 
         LOG.info("Analyzing...");
 
-        SourceCodeProvider sourceCodeProvider = new SourceCodeProvider(
+        final SourceCodeProvider sourceCodeProvider = new SourceCodeProvider(
                 sourceDirectories.stream().map(File::new).collect(Collectors.toList())
                         .toArray(new File[sourceDirectories.size()]));
-        SourceCodeAnalyzer sourceCodeAnalyzer = sourceCodeAnalyzerFactory.create(sourceCodeProvider);
+        final SourceCodeAnalyzer sourceCodeAnalyzer = sourceCodeAnalyzerFactory.create(sourceCodeProvider);
 
         StopWatch stopWatch = StopWatch.createStarted();
-        ResultSet resultSet = sourceCodeAnalyzer.analyze(sourceCodeProvider);
-        LOG.info("Found {} types.", resultSet.getTypes().size());
-        LOG.info("Found {} inheritance relationships.", resultSet.getInheritanceRelationships().size());
-        LOG.info("Found {} field relationships.", resultSet.getFieldRelationships().size());
-        LOG.info("Found {} create instance relationships.", resultSet.getCreateInstanceRelationships().size());
-        LOG.info("Found {} invoke relationships.", resultSet.getInvokeRelationships().size());
-        LOG.info("Found {} access field relationships.", resultSet.getAccessFieldRelationships().size());
+        final Set<Object> graph = sourceCodeAnalyzer.analyze(sourceCodeProvider);
+        LOG.info("Found {} nodes and relationships.", graph.size());
         LOG.info("Analysis took {} sec.", stopWatch.getTime(TimeUnit.SECONDS));
 
         stopWatch = StopWatch.createStarted();
@@ -50,12 +45,7 @@ public class Analyzer {
         LOG.info("Cleared stored graph in {} sec.", stopWatch.getTime(TimeUnit.SECONDS));
 
         stopWatch = StopWatch.createStarted();
-        graphPersistence.persist(resultSet.getTypes());
-        graphPersistence.persist(resultSet.getCreateInstanceRelationships());
-        graphPersistence.persist(resultSet.getFieldRelationships());
-        graphPersistence.persist(resultSet.getInheritanceRelationships());
-        graphPersistence.persist(resultSet.getInvokeRelationships());
-        graphPersistence.persist(resultSet.getAccessFieldRelationships());
+        graphPersistence.persist(graph);
         LOG.info("Stored graph in {} sec.", stopWatch.getTime(TimeUnit.SECONDS));
     }
 }

@@ -21,7 +21,7 @@ sourceSets {
 }
 
 dependencies {
-    implementation("com.github.javaparser:javaparser-symbol-solver-core:3.16.1")
+    implementation("com.github.javaparser:javaparser-symbol-solver-core:3.22.1")
     implementation("com.google.code.findbugs:jsr305:3.0.2")
     implementation("commons-io:commons-io:2.7")
     implementation("org.apache.commons:commons-lang3:3.10")
@@ -44,6 +44,11 @@ dependencies {
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.8")
     implementation("commons-cli:commons-cli:1.4")
+
+    testImplementation(platform("org.junit:junit-bom:5.7.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.mockito:mockito-core:3.9.0")
+    testImplementation("org.assertj:assertj-core:3.20.2")
 }
 
 java {
@@ -71,6 +76,11 @@ tasks {
         testClassesDirs = sourceSets["integrationTest"].output.classesDirs
         classpath = sourceSets["integrationTest"].runtimeClasspath
         mustRunAfter(test)
+
+        useJUnitPlatform()
+        testLogging {
+            events("passed", "skipped", "failed")
+        }
     }
 
     check {
@@ -79,6 +89,13 @@ tasks {
 
     named<DefaultTask>("docker") {
         dependsOn(build)
+    }
+
+    test {
+        useJUnitPlatform()
+        testLogging {
+            events("passed", "skipped", "failed")
+        }
     }
 }
 
