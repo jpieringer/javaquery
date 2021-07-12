@@ -18,10 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 public class SourceCodeAnalyzer {
 
@@ -51,6 +48,8 @@ public class SourceCodeAnalyzer {
         private final JavaParserWrapper javaParserWrapper;
         @Nonnull
         private final GraphBuilder graphBuilder;
+        @Nonnull
+        private final HashMap<ElementNames, FieldInitializationStorage> fieldInitializationStorageMap = new HashMap<>();
 
         public Visitor(@Nonnull final JavaParserWrapper javaParserWrapper, @Nonnull final GraphBuilder graphBuilder) {
             this.javaParserWrapper = Objects.requireNonNull(javaParserWrapper);
@@ -65,11 +64,10 @@ public class SourceCodeAnalyzer {
 
         private void performVisit(final ObjectCreationExpr expr) {
             Objects.requireNonNull(expr);
-            final ElementNames containingType = javaParserWrapper.getParentClassOrInterfaceType(expr.getType());
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(expr.getType());
 
             try {
                 final ElementNames createdType = javaParserWrapper.getSimplifiedType(expr.getType());
-                final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(expr);
 
                 final ResolvedConstructorDeclaration resolvedConstructorDeclaration = expr.resolve();
                 final List<ElementNames> parameterTypes = new ArrayList<>(resolvedConstructorDeclaration.getNumberOfParams());
@@ -82,8 +80,18 @@ public class SourceCodeAnalyzer {
                 graphBuilder.addType(createdType);
                 graphBuilder.addConstructor(constructor);
                 graphBuilder.addHasConstructorRelationship(declaringType, constructor);
-                graphBuilder.addCreateInstanceRelationship(parentNamedCallable, constructor);
 
+                final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(expr);
+                if (parentNamedCallable != null) {
+                    graphBuilder.addCreateInstanceRelationship(parentNamedCallable, constructor);
+                    return;
+                }
+
+                if (javaParserWrapper.isInFieldDeclaration(expr)) {
+                    fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(expr)).addInvokedConstructor(constructor);
+                } else {
+                    throw new AssertionError("No parent method and no parent field declaration found.");
+                }
             } catch (UnsolvedSymbolException e) {
                 LOG.debug("Cannot resolve {} in {}.", expr.getType(), containingType);
             } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
@@ -100,7 +108,7 @@ public class SourceCodeAnalyzer {
         private void performVisit(final FieldDeclaration n) {
             Objects.requireNonNull(n);
 
-            final ElementNames containingType = javaParserWrapper.getParentClassOrInterfaceType(n);
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
             graphBuilder.addType(containingType);
 
             if (n.getVariables().getFirst().isEmpty()) {
@@ -132,7 +140,45 @@ public class SourceCodeAnalyzer {
         @Override
         public void visit(ClassOrInterfaceDeclaration n, Void ignored) {
             performVisit(n);
+
+            ElementNames declaredType = javaParserWrapper.getParentTypeDeclaration(n);
+            fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
             super.visit(n, ignored);
+            addFieldInitializationCallsToTheConstructors(declaredType, fieldInitializationStorageMap.remove(declaredType));
+        }
+
+        /**
+         * Field initialization is done before the constructors are called. Add it to all existing constructors and
+         * create a default constructor if none is defined.
+         */
+        private void addFieldInitializationCallsToTheConstructors(@Nonnull final ElementNames declaredType, @Nonnull final FieldInitializationStorage fieldInitializationStorage) {
+            Objects.requireNonNull(declaredType);
+            Objects.requireNonNull(fieldInitializationStorage);
+
+            if (!fieldInitializationStorage.hasFieldInitializationStored()) {
+                return;
+            }
+
+            final ArrayList<ElementNames> constructors = new ArrayList<>(fieldInitializationStorage.getConstructors());
+
+            if (constructors.isEmpty()) {
+                final ElementNames defaultConstructor = FullyQualifiedNameUtils.getConstructorName(declaredType, Collections.emptyList());
+                graphBuilder.addConstructor(defaultConstructor);
+                graphBuilder.addHasConstructorRelationship(declaredType, defaultConstructor);
+                constructors.add(defaultConstructor);
+            }
+
+            for (ElementNames constructor : constructors) {
+                for (ElementNames accessedField : fieldInitializationStorage.getAccessedFields()) {
+                    graphBuilder.addAccessRelationship(constructor, accessedField);
+                }
+                for (ElementNames invokedConstructor : fieldInitializationStorage.getInvokedConstructors()) {
+                    graphBuilder.addCreateInstanceRelationship(constructor, invokedConstructor);
+                }
+                for (ElementNames invokedMethod : fieldInitializationStorage.getInvokedMethods()) {
+                    graphBuilder.addInvokeRelationship(constructor, invokedMethod);
+                }
+            }
         }
 
         private void performVisit(final ClassOrInterfaceDeclaration n) {
@@ -181,9 +227,8 @@ public class SourceCodeAnalyzer {
         private void performVisit(final MethodCallExpr n) {
             Objects.requireNonNull(n);
 
-            final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n);
-
             if (n.getScope().isEmpty()) {
+                // TODO how to handle those?
                 return; // The scope is null for e.g. static import method calls
             }
 
@@ -198,7 +243,18 @@ public class SourceCodeAnalyzer {
             graphBuilder.addType(declaringType);
             graphBuilder.addMethod(method);
             graphBuilder.addHasMethodRelationship(declaringType, method);
-            graphBuilder.addInvokeRelationship(parentNamedCallable, method);
+
+            final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n);
+            if (parentNamedCallable != null) {
+                graphBuilder.addInvokeRelationship(parentNamedCallable, method);
+                return;
+            }
+
+            if (javaParserWrapper.isInFieldDeclaration(n)) {
+                fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(n)).addInvokedMethod(method);
+            } else {
+                throw new AssertionError("No parent method and no parent field declaration found.");
+            }
         }
 
 
@@ -211,8 +267,7 @@ public class SourceCodeAnalyzer {
         private void performVisit(final FieldAccessExpr n) {
             Objects.requireNonNull(n);
 
-            final ElementNames containingType = javaParserWrapper.getParentClassOrInterfaceType(n);
-            final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n);
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
 
             ResolvedValueDeclaration valueDeclaration;
             try {
@@ -239,9 +294,18 @@ public class SourceCodeAnalyzer {
                     graphBuilder.addOfTypeRelationship(field, typeOfField);
 
                     // The actual access field relationship
-                    graphBuilder.addAccessRelationship(parentNamedCallable, field);
-                }
+                    final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n);
+                    if (parentNamedCallable != null) {
+                        graphBuilder.addAccessRelationship(parentNamedCallable, field);
+                        return;
+                    }
 
+                    if (javaParserWrapper.isInFieldDeclaration(n)) {
+                        fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(n)).addAccessedField(field);
+                    } else {
+                        throw new AssertionError("No parent method and no parent field declaration found.");
+                    }
+                }
             } catch (UnsolvedSymbolException e) {
                 LOG.debug("Cannot resolve {} in {}.", valueDeclaration, containingType);
             } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
@@ -258,13 +322,14 @@ public class SourceCodeAnalyzer {
         private void performVisit(final ConstructorDeclaration n) {
             Objects.requireNonNull(n);
 
-            final ElementNames containingType = javaParserWrapper.getParentClassOrInterfaceType(n);
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
             graphBuilder.addType(containingType);
 
             final List<ElementNames> parameterTypes = javaParserWrapper.getParameterTypes(n.getParameters());
             final ElementNames constructor = FullyQualifiedNameUtils.getConstructorName(containingType, parameterTypes);
             graphBuilder.addConstructor(constructor);
             graphBuilder.addHasConstructorRelationship(containingType, constructor);
+            fieldInitializationStorageMap.get(containingType).addConstructor(constructor);
         }
 
         @Override
@@ -272,13 +337,12 @@ public class SourceCodeAnalyzer {
             performVisit(n);
 
             super.visit(n, arg);
-
         }
 
         private void performVisit(final MethodDeclaration n) {
             Objects.requireNonNull(n);
 
-            final ElementNames containingType = javaParserWrapper.getParentClassOrInterfaceType(n);
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
             graphBuilder.addType(containingType);
 
             final List<ElementNames> parameterTypes = javaParserWrapper.getParameterTypes(n.getParameters());

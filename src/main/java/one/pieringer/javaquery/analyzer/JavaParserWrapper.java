@@ -116,7 +116,7 @@ public class JavaParserWrapper {
     }
 
     @Nonnull
-    public ElementNames getParentClassOrInterfaceType(@Nonnull final Node node) {
+    public ElementNames getParentTypeDeclaration(@Nonnull final Node node) {
         Objects.requireNonNull(node);
 
         // TODO Is this really correct?
@@ -135,7 +135,7 @@ public class JavaParserWrapper {
         // TODO add RecordDeclaration
 
         if (node.getParentNode().isPresent()) {
-            return getParentClassOrInterfaceType(node.getParentNode().get());
+            return getParentTypeDeclaration(node.getParentNode().get());
         }
 
         throw new AssertionError("No class or interface declaration parent found.");
@@ -152,7 +152,7 @@ public class JavaParserWrapper {
         }).collect(Collectors.toList());
     }
 
-    @Nonnull
+    @CheckForNull
     public CallableDeclaration<?> getParentMethodDeclaration(@Nonnull final Node node) {
         Objects.requireNonNull(node);
 
@@ -166,14 +166,20 @@ public class JavaParserWrapper {
             return getParentMethodDeclaration(node.getParentNode().get());
         }
 
-        throw new AssertionError("No callable (method or constructor) declaration parent found.");
+        return null;
     }
 
-    @Nonnull
+    @CheckForNull
     public ElementNames getParentNamedCallable(@Nonnull final Node node) {
-        final ElementNames containingType = getParentClassOrInterfaceType(node);
+        Objects.requireNonNull(node);
+
+        final ElementNames containingType = getParentTypeDeclaration(node);
 
         final CallableDeclaration<?> callableDeclaration = getParentMethodDeclaration(node);
+        if (callableDeclaration == null) {
+            return null;
+        }
+
         final List<ElementNames> parameterTypeNames = getParameterTypes(callableDeclaration.getParameters());
 
         if (callableDeclaration instanceof MethodDeclaration) {
@@ -183,5 +189,19 @@ public class JavaParserWrapper {
         }
 
         throw new AssertionError("Unknown sub class of CallableDeclaration");
+    }
+
+    public boolean isInFieldDeclaration(@Nonnull final Node node) {
+        Objects.requireNonNull(node);
+
+        if (node instanceof FieldDeclaration) {
+            return true;
+        }
+
+        if (node.getParentNode().isEmpty()) {
+            return false;
+        }
+
+        return isInFieldDeclaration(node.getParentNode().get());
     }
 }
