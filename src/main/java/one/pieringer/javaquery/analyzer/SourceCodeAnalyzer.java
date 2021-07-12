@@ -97,9 +97,11 @@ public class SourceCodeAnalyzer {
                     throw new AssertionError("No parent method and no parent field declaration found.");
                 }
             } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
+                LOG.debug("Symbol resolving failed in {}. Ignoring it. Message: {}", containingType.fullyQualified(), e.getMessage());
             } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                LOG.debug("UnsupportedOperationException during getting the type for " + expr.getType().asString(), e);
+                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring it. Message: {}" + containingType.fullyQualified(), e.getMessage());
+            } catch (RuntimeException e) {
+                rethrowIfNoResolveException(containingType, e);
             }
         }
 
@@ -134,9 +136,11 @@ public class SourceCodeAnalyzer {
                     graphBuilder.addOfTypeRelationship(field, fieldType);
                 }
             } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
+                LOG.debug("Symbol resolving failed in {}. Ignoring it. Message: {}", containingType.fullyQualified(), e.getMessage());
             } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                LOG.debug("UnsupportedOperationException during getting the type for " + n.getVariables().getFirst().get().getType(), e);
+                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring it. Message: {}" + containingType.fullyQualified(), e.getMessage());
+            } catch (RuntimeException e) {
+                rethrowIfNoResolveException(containingType, e);
             }
         }
 
@@ -167,9 +171,11 @@ public class SourceCodeAnalyzer {
                     graphBuilder.addType(superType);
                     graphBuilder.addInheritsRelationship(declaredType, superType);
                 } catch (UnsolvedSymbolException e) {
-                    LOG.debug("Symbol resolving failed in {}. Ignoring it.", declaredType.fullyQualified());
+                    LOG.debug("Symbol resolving failed in {}. Ignoring it. Message: {}", declaredType.fullyQualified(), e.getMessage());
                 } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                    LOG.debug("UnsupportedOperationException during getting the type for " + type.asString(), e);
+                    LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring it. Message: {}" + declaredType.fullyQualified(), e.getMessage());
+                } catch (RuntimeException e) {
+                    rethrowIfNoResolveException(declaredType, e);
                 }
             }
         }
@@ -262,7 +268,11 @@ public class SourceCodeAnalyzer {
                     throw new AssertionError("No parent method and no parent field declaration found.");
                 }
             } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
+                LOG.debug("Symbol resolving failed in {}. Ignoring it. Message: {}", containingType.fullyQualified(), e.getMessage());
+            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring it. Message: {}" + containingType.fullyQualified(), e.getMessage());
+            } catch (RuntimeException e) {
+                rethrowIfNoResolveException(containingType, e);
             }
         }
 
@@ -277,18 +287,8 @@ public class SourceCodeAnalyzer {
 
             final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
 
-            ResolvedValueDeclaration valueDeclaration;
             try {
-                valueDeclaration = n.resolve();
-            } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
-                return;
-            } catch (RuntimeException e) {
-                LOG.debug("Got a RuntimeException " + n + " in " + containingType + ".", e);
-                return;
-            }
-
-            try {
+                final ResolvedValueDeclaration valueDeclaration = n.resolve();
                 if (valueDeclaration instanceof ResolvedFieldDeclaration resolvedFieldDeclaration) {
                     // Type that contains the accessed field
                     final ElementNames typeThatContainsTheField = new ElementNames(resolvedFieldDeclaration.declaringType().asReferenceType().getQualifiedName(), resolvedFieldDeclaration.declaringType().asReferenceType().getName());
@@ -318,9 +318,11 @@ public class SourceCodeAnalyzer {
                     }
                 }
             } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
+                LOG.debug("Symbol resolving failed in {}. Ignoring it. Message: {}", containingType.fullyQualified(), e.getMessage());
             } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                LOG.debug("UnsupportedOperationException during getting the type for " + valueDeclaration.toString(), e);
+                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring it. Message: {}" + containingType.fullyQualified(), e.getMessage());
+            } catch (RuntimeException e) {
+                rethrowIfNoResolveException(containingType, e);
             }
         }
 
@@ -342,7 +344,11 @@ public class SourceCodeAnalyzer {
                 graphBuilder.addHasConstructorRelationship(containingType, constructor);
                 fieldInitializationStorageMap.get(containingType).addConstructor(constructor);
             } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
+                LOG.debug("Symbol resolving failed in {}. Ignoring it. Message: {}", containingType.fullyQualified(), e.getMessage());
+            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring it. Message: {}" + containingType.fullyQualified(), e.getMessage());
+            } catch (RuntimeException e) {
+                rethrowIfNoResolveException(containingType, e);
             }
         }
 
@@ -364,8 +370,24 @@ public class SourceCodeAnalyzer {
                 graphBuilder.addMethod(method);
                 graphBuilder.addHasMethodRelationship(containingType, method);
             } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
+                LOG.debug("Symbol resolving failed in {}. Ignoring it. Message: {}", containingType.fullyQualified(), e.getMessage());
+            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
+                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring it. Message: {}" + containingType.fullyQualified(), e.getMessage());
+            } catch (RuntimeException e) {
+                rethrowIfNoResolveException(containingType, e);
             }
+        }
+
+        private void rethrowIfNoResolveException(@Nonnull final ElementNames containingType, @Nonnull final RuntimeException e) {
+            Objects.requireNonNull(containingType);
+            Objects.requireNonNull(e);
+
+            if (e.getMessage().contains("Unable to calculate the type of a parameter of a method call.")) {
+                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
+                return;
+            }
+
+            throw e;
         }
     }
 }
