@@ -38,7 +38,13 @@ public class SourceCodeAnalyzer {
         final GraphBuilder graphBuilder = new GraphBuilder();
         final Visitor visitor = new Visitor(javaParserWrapper, graphBuilder);
 
-        sourceCodeProvider.visitJavaFiles(javaFile -> visitor.visit(javaParserWrapper.parseFile(javaFile), null));
+        sourceCodeProvider.visitJavaFiles(javaFile -> {
+            try {
+                visitor.visit(javaParserWrapper.parseFile(javaFile), null);
+            } catch (RuntimeException e) {
+                throw new RuntimeException("Failed to analyze file " + javaFile.getAbsolutePath(), e);
+            }
+        });
 
         return graphBuilder.getGraph();
     }
@@ -146,9 +152,14 @@ public class SourceCodeAnalyzer {
 
         @Override
         public void visit(ClassOrInterfaceDeclaration n, Void ignored) {
+            if (n.isLocalClassDeclaration()) {
+                // TODO Support local class declarations
+                return;
+            }
+
             performVisit(n);
 
-            ElementNames declaredType = javaParserWrapper.getParentTypeDeclaration(n);
+            final ElementNames declaredType = javaParserWrapper.getParentTypeDeclaration(n);
             fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
             super.visit(n, ignored);
             addFieldInitializationCallsToTheConstructors(declaredType, fieldInitializationStorageMap.remove(declaredType));
@@ -235,11 +246,6 @@ public class SourceCodeAnalyzer {
 
         private void performVisit(final MethodCallExpr n) {
             Objects.requireNonNull(n);
-
-            if (n.getScope().isEmpty()) {
-                // TODO how to handle those?
-                return; // The scope is null for e.g. static import method calls
-            }
 
             final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
 
