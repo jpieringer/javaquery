@@ -12,11 +12,11 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class InvokeTest {
+public class InvokeMethodWithTypeArgumentTest {
     @Test
     void verifyInvokeMethodIsDetected() throws URISyntaxException {
-        final Type typeWithMethod = new Type("pkg.TypeWithMethod", "TypeWithMethod");
-        final Method method = new Method("pkg.TypeWithMethod.method(java.lang.String, int)", "method(String, int)");
+        final Type typeWithMethod = new Type("java.util.Collections", "Collections");
+        final Method method = new Method("java.util.Collections.singleton(T)", "singleton(T)");
         final HasMethodRelationship hasMethodRelationship = new HasMethodRelationship(typeWithMethod, method);
 
         final Type typeThatInvokesMethod = new Type("pkg.TypeThatInvokesMethod", "TypeThatInvokesMethod");
@@ -27,7 +27,7 @@ public class InvokeTest {
 
         final Set<Object> expectedElements = Set.of(typeWithMethod, method, hasMethodRelationship, typeThatInvokesMethod, invokingMethod, hasInvokingMethodRelationship, invokeRelationship);
 
-        final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(InvokeTest.class);
+        final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(InvokeMethodWithTypeArgumentTest.class);
 
         assertThat(actualElements).containsExactlyInAnyOrderElementsOf(expectedElements);
     }

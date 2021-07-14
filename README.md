@@ -148,6 +148,10 @@ Describes that a field is of a given type.
 *fieldType*: The type of the field.
 
 
+## Not supported features
+- Local class definitions (they are ignored)
+- Generic type declarations in methods are not part of the fully qualified method name (they are used in the parameter list but not defined)
+
 ## Future work
 * Consider an alternative java parser: http://spoon.gforge.inria.fr/
 

@@ -73,7 +73,7 @@ public class JavaParserWrapper {
             return null; // Ignored as primitive types are not interesting in the graph.
         }
 
-        throw new NotImplementedException("Unknown type " + type);
+        throw new UnsupportedOperationException("Unknown type " + type);
     }
 
     /**
@@ -92,7 +92,7 @@ public class JavaParserWrapper {
             return getSimplifiedType(resolvedType.asArrayType().getComponentType());
         }
 
-        throw new AssertionError("Type " + resolvedType + " is not implemented");
+        throw new UnsupportedOperationException("Type " + resolvedType + " is not implemented");
     }
 
     /**
@@ -110,9 +110,11 @@ public class JavaParserWrapper {
         } else if (resolvedType.isArray()) {
             final ElementNames componentType = getExactType(resolvedType.asArrayType().getComponentType());
             return new ElementNames(componentType.fullyQualified() + "[]", componentType.simple() + "[]");
+        } else if (resolvedType.isTypeVariable()) {
+            return new ElementNames(resolvedType.asTypeVariable().describe(), resolvedType.asTypeVariable().describe());
         }
 
-        throw new AssertionError("Type " + resolvedType + " is not implemented");
+        throw new UnsupportedOperationException("Type " + resolvedType + " is not implemented");
     }
 
     @Nonnull
@@ -188,7 +190,7 @@ public class JavaParserWrapper {
             return FullyQualifiedNameUtils.getConstructorName(containingType, parameterTypeNames);
         }
 
-        throw new AssertionError("Unknown sub class of CallableDeclaration");
+        throw new UnsupportedOperationException("Unknown sub class of CallableDeclaration");
     }
 
     public boolean isInFieldDeclaration(@Nonnull final Node node) {
