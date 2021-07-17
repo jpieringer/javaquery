@@ -192,10 +192,32 @@ public class JavaParserWrapper {
             return true;
         }
 
+        if (node instanceof TypeDeclaration) {
+            return false;
+        }
+
         if (node.getParentNode().isEmpty()) {
             return false;
         }
 
         return isInFieldDeclaration(node.getParentNode().get());
+    }
+
+    public boolean isInInitializer(@Nonnull final Node node) {
+        Objects.requireNonNull(node);
+
+        if (node instanceof InitializerDeclaration) {
+            return true;
+        }
+
+        if (node instanceof TypeDeclaration) {
+            return false;
+        }
+
+        if (node.getParentNode().isEmpty()) {
+            return false;
+        }
+
+        return isInInitializer(node.getParentNode().get());
     }
 }

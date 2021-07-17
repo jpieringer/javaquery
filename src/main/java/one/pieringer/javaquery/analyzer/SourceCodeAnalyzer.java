@@ -45,6 +45,8 @@ public class SourceCodeAnalyzer {
                 visitor.visit(javaParserWrapper.parseFile(javaFile), new JavaFileContext());
             } catch (RuntimeException e) {
                 throw new RuntimeException("Failed to analyze file " + javaFile.getAbsolutePath(), e);
+            } catch (AssertionError e) {
+                throw new AssertionError("Failed to analyze file " + javaFile.getAbsolutePath(), e);
             }
         });
 
@@ -107,10 +109,10 @@ public class SourceCodeAnalyzer {
                     return;
                 }
 
-                if (javaParserWrapper.isInFieldDeclaration(expr)) {
+                if (javaParserWrapper.isInFieldDeclaration(expr) || javaParserWrapper.isInInitializer(expr)) {
                     context.fieldInitializationStorageMap.get(containingType).addInvokedConstructor(constructor);
                 } else {
-                    throw new AssertionError("No parent method and no parent field declaration found.");
+                    throw new AssertionError("No parent method and no parent field declaration found for: " + expr);
                 }
             } catch (UnsolvedSymbolException e) {
                 LOG.debug("Symbol resolving failed in {}. Ignoring it. Message: {}", containingType.fullyQualified(), e.getMessage());
@@ -140,7 +142,6 @@ public class SourceCodeAnalyzer {
             try {
                 final ElementNames fieldType = javaParserWrapper.getSimplifiedType(n.getVariables().getFirst().get().getType());
                 if (fieldType == null) {
-                    LOG.debug("Cannot resolve {} in {}.", n.getVariables().getFirst().get().getType(), containingType.fullyQualified());
                     return;
                 }
 
@@ -191,7 +192,6 @@ public class SourceCodeAnalyzer {
                 try {
                     final ElementNames superType = javaParserWrapper.getSimplifiedType(type);
                     if (superType == null) {
-                        LOG.debug("Cannot resolve {} in {}.", type, declaredType.fullyQualified());
                         return;
                     }
 
@@ -253,6 +253,7 @@ public class SourceCodeAnalyzer {
 
             final ElementNames declaredType = new ElementNames(n.getFullyQualifiedName().orElseThrow(), n.getNameAsString());
             context.typeDeclarations.put(n, declaredType);
+            context.fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
             graphBuilder.addType(declaredType);
         }
 
@@ -287,10 +288,10 @@ public class SourceCodeAnalyzer {
                     return;
                 }
 
-                if (javaParserWrapper.isInFieldDeclaration(n)) {
-                    context.fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations)).addInvokedMethod(method);
+                if (javaParserWrapper.isInFieldDeclaration(n) || javaParserWrapper.isInInitializer(n)) {
+                    context.fieldInitializationStorageMap.get(containingType).addInvokedMethod(method);
                 } else {
-                    throw new AssertionError("No parent method and no parent field declaration found.");
+                    throw new AssertionError("No parent method and no parent field declaration found for " + n);
                 }
             } catch (UnsolvedSymbolException e) {
                 LOG.debug("Symbol resolving failed in {}. Ignoring it. Message: {}", containingType.fullyQualified(), e.getMessage());
@@ -337,10 +338,10 @@ public class SourceCodeAnalyzer {
                         return;
                     }
 
-                    if (javaParserWrapper.isInFieldDeclaration(n)) {
+                    if (javaParserWrapper.isInFieldDeclaration(n) || javaParserWrapper.isInInitializer(n)) {
                         context.fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations)).addAccessedField(field);
                     } else {
-                        throw new AssertionError("No parent method and no parent field declaration found.");
+                        throw new AssertionError("No parent method and no parent field declaration found for: " + n);
                     }
                 }
             } catch (UnsolvedSymbolException e) {
@@ -416,6 +417,18 @@ public class SourceCodeAnalyzer {
             }
 
             super.visit(n, context);
+        }
+
+        @Override
+        public void visit(EnumConstantDeclaration n, JavaFileContext context) {
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
+
+            LOG.debug("Ignoring enum constant declaration of {} as it is not supported.", containingType.fullyQualified());
+        }
+
+        @Override
+        public void visit(AnnotationDeclaration n, JavaFileContext arg) {
+            LOG.debug("Ignoring annotation declaration of {} as it is not supported.", n.getName());
         }
 
         private void rethrowIfNoResolveException(@Nonnull final ElementNames containingType,
