@@ -41,7 +41,7 @@ public class JavaParserWrapper {
         try {
             ParseResult<CompilationUnit> parseResult = javaParser.parse(javaFile);
             if (!parseResult.isSuccessful() || parseResult.getProblems().size() > 0) {
-                throw new RuntimeException("Parsing of java file " + javaFile + " failed.");
+                throw new RuntimeException("Parsing of java file " + javaFile + " failed. Problems: " + parseResult.getProblems());
             }
             if (parseResult.getResult().isEmpty()) {
                 throw new IllegalArgumentException("Parsing of " + javaFile + " did not lead any result.");
