@@ -1,5 +1,6 @@
 package one.pieringer.javaquery.analyzer;
 
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
@@ -7,7 +8,11 @@ import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.github.javaparser.resolution.UnsolvedSymbolException;
-import com.github.javaparser.resolution.declarations.*;
+import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclaration;
+import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration;
+import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
+import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
+import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserAnonymousClassDeclaration;
 import com.google.common.collect.Iterables;
 import one.pieringer.javaquery.FullyQualifiedNameUtils;
 import one.pieringer.javaquery.model.GraphBuilder;
@@ -37,7 +42,7 @@ public class SourceCodeAnalyzer {
 
         sourceCodeProvider.visitJavaFiles(javaFile -> {
             try {
-                visitor.visit(javaParserWrapper.parseFile(javaFile), null);
+                visitor.visit(javaParserWrapper.parseFile(javaFile), new JavaFileContext());
             } catch (RuntimeException e) {
                 throw new RuntimeException("Failed to analyze file " + javaFile.getAbsolutePath(), e);
             }
@@ -46,13 +51,11 @@ public class SourceCodeAnalyzer {
         return graphBuilder.getGraph();
     }
 
-    private static class Visitor extends VoidVisitorAdapter<Void> {
+    private static class Visitor extends VoidVisitorAdapter<JavaFileContext> {
         @Nonnull
         private final JavaParserWrapper javaParserWrapper;
         @Nonnull
         private final GraphBuilder graphBuilder;
-        @Nonnull
-        private final HashMap<ElementNames, FieldInitializationStorage> fieldInitializationStorageMap = new HashMap<>();
 
         public Visitor(@Nonnull final JavaParserWrapper javaParserWrapper, @Nonnull final GraphBuilder graphBuilder) {
             this.javaParserWrapper = Objects.requireNonNull(javaParserWrapper);
@@ -60,42 +63,52 @@ public class SourceCodeAnalyzer {
         }
 
         @Override
-        public void visit(ObjectCreationExpr expr, Void ignored) {
-            performVisit(expr);
-            super.visit(expr, ignored);
+        public void visit(ObjectCreationExpr expr, JavaFileContext context) {
+            performVisit(expr, context);
+            super.visit(expr, context);
         }
 
-        private void performVisit(final ObjectCreationExpr expr) {
+        private void performVisit(@Nonnull final ObjectCreationExpr expr, @Nonnull final JavaFileContext context) {
             Objects.requireNonNull(expr);
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(expr.getType());
+            Objects.requireNonNull(context);
+
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(expr, context.typeDeclarations);
 
             try {
-                final ElementNames createdType = javaParserWrapper.getSimplifiedType(expr.getType());
+                final ResolvedConstructorDeclaration resolvedConstructorDeclaration = expr.resolve();
 
-                if (createdType == null) {
-                    return;
+                ElementNames createdType;
+                if (resolvedConstructorDeclaration.declaringType() instanceof final JavaParserAnonymousClassDeclaration anonymousClassDeclaration) {
+                    createdType = FullyQualifiedNameUtils.getAnonymousClassName(containingType, context.anonymousTypeDeclarationsCounter, anonymousClassDeclaration.getSuperTypeDeclaration().getName());
+                    context.typeDeclarations.put(expr, createdType);
+                    context.anonymousTypeDeclarationsCounter++;
+
+                    final ElementNames superType = javaParserWrapper.getSimplifiedType(anonymousClassDeclaration.getSuperClass().orElseThrow());
+                    graphBuilder.addType(createdType);
+                    graphBuilder.addType(superType);
+                    graphBuilder.addInheritsRelationship(createdType, superType);
+                } else {
+                    createdType = new ElementNames(resolvedConstructorDeclaration.declaringType().getQualifiedName(), resolvedConstructorDeclaration.declaringType().getName());
+                    graphBuilder.addType(createdType);
                 }
 
-                final ResolvedConstructorDeclaration resolvedConstructorDeclaration = expr.resolve();
                 final List<ElementNames> parameterTypes = new ArrayList<>(resolvedConstructorDeclaration.getNumberOfParams());
                 for (int i = 0; i < resolvedConstructorDeclaration.getNumberOfParams(); ++i) {
                     parameterTypes.add(javaParserWrapper.getExactType(resolvedConstructorDeclaration.getParam(i).getType()));
                 }
-                final ElementNames declaringType = new ElementNames(resolvedConstructorDeclaration.declaringType().getQualifiedName(), resolvedConstructorDeclaration.declaringType().getName());
-                final ElementNames constructor = FullyQualifiedNameUtils.getConstructorName(declaringType, parameterTypes);
+                final ElementNames constructor = FullyQualifiedNameUtils.getConstructorName(createdType, parameterTypes);
 
-                graphBuilder.addType(createdType);
                 graphBuilder.addConstructor(constructor);
-                graphBuilder.addHasConstructorRelationship(declaringType, constructor);
+                graphBuilder.addHasConstructorRelationship(createdType, constructor);
 
-                final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(expr);
+                final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(expr, context.typeDeclarations);
                 if (parentNamedCallable != null) {
                     graphBuilder.addCreateInstanceRelationship(parentNamedCallable, constructor);
                     return;
                 }
 
                 if (javaParserWrapper.isInFieldDeclaration(expr)) {
-                    fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(expr)).addInvokedConstructor(constructor);
+                    context.fieldInitializationStorageMap.get(containingType).addInvokedConstructor(constructor);
                 } else {
                     throw new AssertionError("No parent method and no parent field declaration found.");
                 }
@@ -109,15 +122,16 @@ public class SourceCodeAnalyzer {
         }
 
         @Override
-        public void visit(FieldDeclaration n, Void ignored) {
-            performVisit(n);
-            super.visit(n, ignored);
+        public void visit(FieldDeclaration n, JavaFileContext context) {
+            performVisit(n, context);
+            super.visit(n, context);
         }
 
-        private void performVisit(final FieldDeclaration n) {
+        private void performVisit(@Nonnull final FieldDeclaration n, @Nonnull final JavaFileContext context) {
             Objects.requireNonNull(n);
+            Objects.requireNonNull(context);
 
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
 
             if (n.getVariables().getFirst().isEmpty()) {
                 return;
@@ -147,25 +161,30 @@ public class SourceCodeAnalyzer {
             }
         }
 
+        // TODO add RecordDeclaration
+
         @Override
-        public void visit(ClassOrInterfaceDeclaration n, Void ignored) {
+        public void visit(ClassOrInterfaceDeclaration n, JavaFileContext context) {
             if (n.isLocalClassDeclaration()) {
                 // TODO Support local class declarations
                 return;
             }
 
-            performVisit(n);
+            performVisit(n, context);
 
-            final ElementNames declaredType = javaParserWrapper.getParentTypeDeclaration(n);
-            fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
-            super.visit(n, ignored);
-            addFieldInitializationCallsToTheConstructors(declaredType, fieldInitializationStorageMap.remove(declaredType));
+            super.visit(n, context);
+
+            final ElementNames declaredType = context.typeDeclarations.get(n);
+            addFieldInitializationCallsToTheConstructors(declaredType, context.fieldInitializationStorageMap.remove(declaredType));
         }
 
-        private void performVisit(final ClassOrInterfaceDeclaration n) {
+        private void performVisit(@Nonnull final ClassOrInterfaceDeclaration n, @Nonnull final JavaFileContext context) {
             Objects.requireNonNull(n);
+            Objects.requireNonNull(context);
 
             final ElementNames declaredType = new ElementNames(n.getFullyQualifiedName().orElseThrow(), n.getNameAsString());
+            context.typeDeclarations.put(n, declaredType);
+            context.fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
             graphBuilder.addType(declaredType);
 
             for (ClassOrInterfaceType type : Iterables.concat(n.getExtendedTypes(), n.getImplementedTypes())) {
@@ -223,28 +242,31 @@ public class SourceCodeAnalyzer {
         }
 
         @Override
-        public void visit(EnumDeclaration n, Void arg) {
-            performVisit(n);
-            super.visit(n, arg);
+        public void visit(EnumDeclaration n, JavaFileContext context) {
+            performVisit(n, context);
+            super.visit(n, context);
         }
 
-        private void performVisit(final EnumDeclaration n) {
+        private void performVisit(@Nonnull final EnumDeclaration n, @Nonnull final JavaFileContext context) {
             Objects.requireNonNull(n);
+            Objects.requireNonNull(context);
 
             final ElementNames declaredType = new ElementNames(n.getFullyQualifiedName().orElseThrow(), n.getNameAsString());
+            context.typeDeclarations.put(n, declaredType);
             graphBuilder.addType(declaredType);
         }
 
         @Override
-        public void visit(MethodCallExpr n, Void ignored) {
-            performVisit(n);
-            super.visit(n, ignored);
+        public void visit(MethodCallExpr n, JavaFileContext context) {
+            performVisit(n, context);
+            super.visit(n, context);
         }
 
-        private void performVisit(final MethodCallExpr n) {
+        private void performVisit(@Nonnull final MethodCallExpr n, @Nonnull final JavaFileContext context) {
             Objects.requireNonNull(n);
+            Objects.requireNonNull(context);
 
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
 
             try {
                 final ResolvedMethodDeclaration resolvedMethodDeclaration = n.resolve();
@@ -252,21 +274,21 @@ public class SourceCodeAnalyzer {
                 for (int i = 0; i < resolvedMethodDeclaration.getNumberOfParams(); ++i) {
                     parameterTypes.add(javaParserWrapper.getExactType(resolvedMethodDeclaration.getParam(i).getType()));
                 }
-                ElementNames declaringType = new ElementNames(resolvedMethodDeclaration.declaringType().getQualifiedName(), resolvedMethodDeclaration.declaringType().getName());
-                ElementNames method = FullyQualifiedNameUtils.getMethodName(declaringType, resolvedMethodDeclaration.getName(), parameterTypes);
+                final ElementNames declaringType = new ElementNames(resolvedMethodDeclaration.declaringType().getQualifiedName(), resolvedMethodDeclaration.declaringType().getName());
+                final ElementNames method = FullyQualifiedNameUtils.getMethodName(declaringType, resolvedMethodDeclaration.getName(), parameterTypes);
 
                 graphBuilder.addType(declaringType);
                 graphBuilder.addMethod(method);
                 graphBuilder.addHasMethodRelationship(declaringType, method);
 
-                final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n);
+                final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n, context.typeDeclarations);
                 if (parentNamedCallable != null) {
                     graphBuilder.addInvokeRelationship(parentNamedCallable, method);
                     return;
                 }
 
                 if (javaParserWrapper.isInFieldDeclaration(n)) {
-                    fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(n)).addInvokedMethod(method);
+                    context.fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations)).addInvokedMethod(method);
                 } else {
                     throw new AssertionError("No parent method and no parent field declaration found.");
                 }
@@ -280,15 +302,16 @@ public class SourceCodeAnalyzer {
         }
 
         @Override
-        public void visit(FieldAccessExpr n, Void arg) {
-            performVisit(n);
-            super.visit(n, arg);
+        public void visit(FieldAccessExpr n, JavaFileContext context) {
+            performVisit(n, context);
+            super.visit(n, context);
         }
 
-        private void performVisit(final FieldAccessExpr n) {
+        private void performVisit(@Nonnull final FieldAccessExpr n, @Nonnull final JavaFileContext context) {
             Objects.requireNonNull(n);
+            Objects.requireNonNull(context);
 
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
 
             try {
                 final ResolvedValueDeclaration valueDeclaration = n.resolve();
@@ -308,14 +331,14 @@ public class SourceCodeAnalyzer {
                     graphBuilder.addOfTypeRelationship(field, typeOfField);
 
                     // The actual access field relationship
-                    final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n);
+                    final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n, context.typeDeclarations);
                     if (parentNamedCallable != null) {
                         graphBuilder.addAccessRelationship(parentNamedCallable, field);
                         return;
                     }
 
                     if (javaParserWrapper.isInFieldDeclaration(n)) {
-                        fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(n)).addAccessedField(field);
+                        context.fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations)).addAccessedField(field);
                     } else {
                         throw new AssertionError("No parent method and no parent field declaration found.");
                     }
@@ -330,22 +353,23 @@ public class SourceCodeAnalyzer {
         }
 
         @Override
-        public void visit(ConstructorDeclaration n, Void arg) {
-            performVisit(n);
-            super.visit(n, arg);
+        public void visit(ConstructorDeclaration n, JavaFileContext context) {
+            performVisit(n, context);
+            super.visit(n, context);
         }
 
-        private void performVisit(final ConstructorDeclaration n) {
+        private void performVisit(@Nonnull final ConstructorDeclaration n, @Nonnull final JavaFileContext context) {
             Objects.requireNonNull(n);
+            Objects.requireNonNull(context);
 
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
 
             try {
                 final List<ElementNames> parameterTypes = javaParserWrapper.getParameterTypes(n.getParameters());
                 final ElementNames constructor = FullyQualifiedNameUtils.getConstructorName(containingType, parameterTypes);
                 graphBuilder.addConstructor(constructor);
                 graphBuilder.addHasConstructorRelationship(containingType, constructor);
-                fieldInitializationStorageMap.get(containingType).addConstructor(constructor);
+                context.fieldInitializationStorageMap.get(containingType).addConstructor(constructor);
             } catch (UnsolvedSymbolException e) {
                 LOG.debug("Symbol resolving failed in {}. Ignoring it. Message: {}", containingType.fullyQualified(), e.getMessage());
             } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
@@ -356,16 +380,17 @@ public class SourceCodeAnalyzer {
         }
 
         @Override
-        public void visit(MethodDeclaration n, Void arg) {
-            performVisit(n);
+        public void visit(MethodDeclaration n, JavaFileContext context) {
+            performVisit(n, context);
 
-            super.visit(n, arg);
+            super.visit(n, context);
         }
 
-        private void performVisit(final MethodDeclaration n) {
+        private void performVisit(@Nonnull final MethodDeclaration n, @Nonnull final JavaFileContext context) {
             Objects.requireNonNull(n);
+            Objects.requireNonNull(context);
 
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n);
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
 
             try {
                 final List<ElementNames> parameterTypes = javaParserWrapper.getParameterTypes(n.getParameters());
@@ -381,7 +406,20 @@ public class SourceCodeAnalyzer {
             }
         }
 
-        private void rethrowIfNoResolveException(@Nonnull final ElementNames containingType, @Nonnull final RuntimeException e) {
+        @Override
+        public void visit(InitializerDeclaration n, JavaFileContext context) {
+            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
+
+            if (n.isStatic()) {
+                LOG.debug("Ignoring static initializer of {} as it is not supported.", containingType.fullyQualified());
+                return;
+            }
+
+            super.visit(n, context);
+        }
+
+        private void rethrowIfNoResolveException(@Nonnull final ElementNames containingType,
+                                                 @Nonnull final RuntimeException e) {
             Objects.requireNonNull(containingType);
             Objects.requireNonNull(e);
 
@@ -392,5 +430,16 @@ public class SourceCodeAnalyzer {
 
             throw e;
         }
+    }
+
+    private static class JavaFileContext {
+        /**
+         * The declared type's name of a type declaring nodes in the AST.
+         */
+        @Nonnull
+        public final HashMap<Node, ElementNames> typeDeclarations = new HashMap<>();
+        public int anonymousTypeDeclarationsCounter = 0;
+        @Nonnull
+        public final HashMap<ElementNames, FieldInitializationStorage> fieldInitializationStorageMap = new HashMap<>();
     }
 }

@@ -8,6 +8,17 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class FullyQualifiedNameUtils {
+    @Nonnull
+    public static ElementNames getAnonymousClassName(@Nonnull final ElementNames containingType, final int anonymousTypeDeclarationsCounter, @Nonnull final String name) {
+        Objects.requireNonNull(containingType);
+        Objects.requireNonNull(name);
+
+        final String fullyQualifiedName = containingType.fullyQualified() + "$" + anonymousTypeDeclarationsCounter + name;
+        final String simpleName = containingType.simple() + "$" + anonymousTypeDeclarationsCounter + name;
+
+        return new ElementNames(fullyQualifiedName, simpleName);
+    }
+
     /**
      * Get the simple and fully qualified constructor name from its type name and parameters.
      */
@@ -96,4 +107,6 @@ public class FullyQualifiedNameUtils {
         Objects.requireNonNull(invokedExecutable);
         return invokingExecutable.fullyQualified() + " -[:INVOKE]-> " + invokedExecutable.fullyQualified();
     }
+
+
 }

@@ -15,12 +15,12 @@ import com.github.javaparser.resolution.declarations.ResolvedReferenceTypeDeclar
 import com.github.javaparser.resolution.types.ResolvedReferenceType;
 import com.github.javaparser.resolution.types.ResolvedType;
 import one.pieringer.javaquery.FullyQualifiedNameUtils;
-import org.apache.commons.lang3.NotImplementedException;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -118,26 +118,16 @@ public class JavaParserWrapper {
     }
 
     @Nonnull
-    public ElementNames getParentTypeDeclaration(@Nonnull final Node node) {
+    public ElementNames getParentTypeDeclaration(@Nonnull final Node node, @Nonnull final HashMap<Node, ElementNames> typeDeclarations) {
         Objects.requireNonNull(node);
+        Objects.requireNonNull(typeDeclarations);
 
-        // TODO Is this really correct?
-//            if (((ClassOrInterfaceDeclaration) node).isLocalClassDeclaration()) {
-//                // A local class declaration does not by itself have a fully qualified name, use the one
-//                // from the parent class.
-//                return getParentClassOrInterfaceDeclaration(node.getParentNode().get());
-//            }
-
-        if (node instanceof ClassOrInterfaceDeclaration ||
-                node instanceof EnumDeclaration ||
-                node instanceof AnnotationDeclaration) {
-            final TypeDeclaration<?> typeDeclaration = (TypeDeclaration<?>) node;
-            return new ElementNames(typeDeclaration.getFullyQualifiedName().orElseThrow(), typeDeclaration.getNameAsString());
+        if (typeDeclarations.containsKey(node)) {
+            return typeDeclarations.get(node);
         }
-        // TODO add RecordDeclaration
 
         if (node.getParentNode().isPresent()) {
-            return getParentTypeDeclaration(node.getParentNode().get());
+            return getParentTypeDeclaration(node.getParentNode().get(), typeDeclarations);
         }
 
         throw new AssertionError("No class or interface declaration parent found.");
@@ -172,15 +162,17 @@ public class JavaParserWrapper {
     }
 
     @CheckForNull
-    public ElementNames getParentNamedCallable(@Nonnull final Node node) {
+    public ElementNames getParentNamedCallable(@Nonnull final Node node, @Nonnull final HashMap<Node, ElementNames> typeDeclarations) {
         Objects.requireNonNull(node);
+        Objects.requireNonNull(typeDeclarations);
 
-        final ElementNames containingType = getParentTypeDeclaration(node);
 
         final CallableDeclaration<?> callableDeclaration = getParentMethodDeclaration(node);
         if (callableDeclaration == null) {
             return null;
         }
+
+        final ElementNames containingType = getParentTypeDeclaration(callableDeclaration, typeDeclarations);
 
         final List<ElementNames> parameterTypeNames = getParameterTypes(callableDeclaration.getParameters());
 
