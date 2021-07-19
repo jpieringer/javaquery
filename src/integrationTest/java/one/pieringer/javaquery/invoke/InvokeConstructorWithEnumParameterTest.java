@@ -1,4 +1,4 @@
-package one.pieringer.javaquery.createinstance;
+package one.pieringer.javaquery.invoke;
 
 import one.pieringer.javaquery.AnalyzerTestRunner;
 import one.pieringer.javaquery.model.*;
@@ -9,20 +9,21 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class CreateInstanceWithPrimitiveParameterTest {
+public class InvokeConstructorWithEnumParameterTest {
     @Test
-    void verifyCreateInstanceIsDetected() throws URISyntaxException {
+    void verifyInvokeConstructorIsDetected() throws URISyntaxException {
         final Type typeOfNewInstance = new Type("pkg.TypeOfNewInstance", "TypeOfNewInstance");
-        final Constructor typeOfNewInstanceConstructor = new Constructor("pkg.TypeOfNewInstance.<init>(int)", "<init>(int)");
+        final Type enumType = new Type("pkg.EnumType", "EnumType");
+        final Constructor typeOfNewInstanceConstructor = new Constructor("pkg.TypeOfNewInstance.<init>(pkg.EnumType)", "<init>(EnumType)");
         final HasConstructorRelationship typeOfNewInstanceHasConstructorRelationship = new HasConstructorRelationship(typeOfNewInstance, typeOfNewInstanceConstructor);
 
         final Type typeWithNewInstance = new Type("pkg.TypeWithNewInstance", "TypeWithNewInstance");
         final Method method = new Method("pkg.TypeWithNewInstance.method()", "method()");
         final HasMethodRelationship hasMethodRelationship = new HasMethodRelationship(typeWithNewInstance, method);
-        final CreateInstanceRelationship createInstanceRelationship = new CreateInstanceRelationship(method, typeOfNewInstanceConstructor);
-        final Set<Object> expectedElements = Set.of(typeOfNewInstance, typeOfNewInstanceConstructor, typeOfNewInstanceHasConstructorRelationship, typeWithNewInstance, method, hasMethodRelationship, createInstanceRelationship);
+        final InvokeRelationship invokeRelationship = new InvokeRelationship(method, typeOfNewInstanceConstructor);
+        final Set<Object> expectedElements = Set.of(typeOfNewInstance, enumType, typeOfNewInstanceConstructor, typeOfNewInstanceHasConstructorRelationship, typeWithNewInstance, method, hasMethodRelationship, invokeRelationship);
 
-        final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(CreateInstanceWithPrimitiveParameterTest.class);
+        final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(InvokeConstructorWithEnumParameterTest.class);
 
         assertThat(actualElements).containsExactlyInAnyOrderElementsOf(expectedElements);
     }

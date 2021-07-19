@@ -12,7 +12,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class InvokeTest {
+public class InvokeMethodTest {
     @Test
     void verifyInvokeMethodIsDetected() throws URISyntaxException {
         final Type typeWithMethod = new Type("pkg.TypeWithMethod", "TypeWithMethod");
@@ -27,7 +27,7 @@ public class InvokeTest {
 
         final Set<Object> expectedElements = Set.of(typeWithMethod, method, hasMethodRelationship, typeThatInvokesMethod, invokingMethod, hasInvokingMethodRelationship, invokeRelationship);
 
-        final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(InvokeTest.class);
+        final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(InvokeMethodTest.class);
 
         assertThat(actualElements).containsExactlyInAnyOrderElementsOf(expectedElements);
     }

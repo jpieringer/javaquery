@@ -78,15 +78,6 @@ public class GraphBuilder {
                 () -> new OfTypeRelationship(getElement(field.fullyQualified()), getElement(type.fullyQualified())));
     }
 
-    public void addCreateInstanceRelationship(@Nonnull final ElementNames executable, @Nonnull final ElementNames constructor) {
-        Objects.requireNonNull(executable);
-        Objects.requireNonNull(constructor);
-        final String fullyQualifiedOfTypeRelationshipName =
-                FullyQualifiedNameUtils.getFullyQualifiedCreateInstanceRelationshipName(executable, constructor);
-        createObjectIfMissing(fullyQualifiedOfTypeRelationshipName,
-                () -> new CreateInstanceRelationship(getElement(executable.fullyQualified()), getElement(constructor.fullyQualified())));
-    }
-
     public void addAccessRelationship(@Nonnull final ElementNames executable, @Nonnull final ElementNames field) {
         Objects.requireNonNull(executable);
         Objects.requireNonNull(field);

@@ -1,4 +1,4 @@
-package one.pieringer.javaquery.createinstance;
+package one.pieringer.javaquery.invoke;
 
 import one.pieringer.javaquery.AnalyzerTestRunner;
 import one.pieringer.javaquery.model.*;
@@ -9,9 +9,9 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class CreateInstanceWithAnonymousClassTest {
+public class InvokeConstructorWithAnonymousClassTest {
     @Test
-    void verifyCreateInstanceIsDetected() throws URISyntaxException {
+    void verifyInvokeConstructorIsDetected() throws URISyntaxException {
         final Type anonymousClass = new Type("pkg.TypeWithNewInstance$0Runnable", "TypeWithNewInstance$0Runnable");
         final Constructor anonymousClassConstructor = new Constructor("pkg.TypeWithNewInstance$0Runnable.<init>()", "<init>()");
         final Method anonymousClassMethod = new Method("pkg.TypeWithNewInstance$0Runnable.run()", "run()");
@@ -33,9 +33,9 @@ public class CreateInstanceWithAnonymousClassTest {
                 typeWithNewInstance,
                 method,
                 new HasMethodRelationship(typeWithNewInstance, method),
-                new CreateInstanceRelationship(method, anonymousClassConstructor));
+                new InvokeRelationship(method, anonymousClassConstructor));
 
-        final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(CreateInstanceWithAnonymousClassTest.class);
+        final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(InvokeConstructorWithAnonymousClassTest.class);
 
         assertThat(actualElements).containsExactlyInAnyOrderElementsOf(expectedElements);
     }

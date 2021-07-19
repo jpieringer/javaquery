@@ -1,4 +1,4 @@
-package one.pieringer.javaquery.createinstance;
+package one.pieringer.javaquery.invoke;
 
 import one.pieringer.javaquery.AnalyzerTestRunner;
 import one.pieringer.javaquery.model.*;
@@ -9,20 +9,20 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class CreateInstanceWithArrayParameterTest {
+public class InvokeConstructorWithReferenceParameterTest {
     @Test
-    void verifyCreateInstanceIsDetected() throws URISyntaxException {
+    void verifyInvokeConstructorIsDetected() throws URISyntaxException {
         final Type typeOfNewInstance = new Type("pkg.TypeOfNewInstance", "TypeOfNewInstance");
-        final Constructor typeOfNewInstanceConstructor = new Constructor("pkg.TypeOfNewInstance.<init>(java.lang.String[])", "<init>(String[])");
+        final Constructor typeOfNewInstanceConstructor = new Constructor("pkg.TypeOfNewInstance.<init>(java.lang.String)", "<init>(String)");
         final HasConstructorRelationship typeOfNewInstanceHasConstructorRelationship = new HasConstructorRelationship(typeOfNewInstance, typeOfNewInstanceConstructor);
 
         final Type typeWithNewInstance = new Type("pkg.TypeWithNewInstance", "TypeWithNewInstance");
         final Method method = new Method("pkg.TypeWithNewInstance.method()", "method()");
         final HasMethodRelationship hasMethodRelationship = new HasMethodRelationship(typeWithNewInstance, method);
-        final CreateInstanceRelationship createInstanceRelationship = new CreateInstanceRelationship(method, typeOfNewInstanceConstructor);
-        final Set<Object> expectedElements = Set.of(typeOfNewInstance, typeOfNewInstanceConstructor, typeOfNewInstanceHasConstructorRelationship, typeWithNewInstance, method, hasMethodRelationship, createInstanceRelationship);
+        final InvokeRelationship invokeRelationship = new InvokeRelationship(method, typeOfNewInstanceConstructor);
+        final Set<Object> expectedElements = Set.of(typeOfNewInstance, typeOfNewInstanceConstructor, typeOfNewInstanceHasConstructorRelationship, typeWithNewInstance, method, hasMethodRelationship, invokeRelationship);
 
-        final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(CreateInstanceWithArrayParameterTest.class);
+        final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(InvokeConstructorWithReferenceParameterTest.class);
 
         assertThat(actualElements).containsExactlyInAnyOrderElementsOf(expectedElements);
     }

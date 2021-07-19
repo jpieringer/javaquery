@@ -31,7 +31,7 @@ public class FieldInitializationWithObjectCreationTest {
                 bigIntegerConstructor,
                 new HasConstructorRelationship(bigIntegerType, bigIntegerConstructor),
 
-                new CreateInstanceRelationship(typeWithFieldConstructor, bigIntegerConstructor));
+                new InvokeRelationship(typeWithFieldConstructor, bigIntegerConstructor));
 
         final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(FieldInitializationWithObjectCreationTest.class);
 

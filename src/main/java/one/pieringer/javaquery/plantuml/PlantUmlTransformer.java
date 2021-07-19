@@ -28,9 +28,9 @@ public class PlantUmlTransformer {
 //            uml.append(transform(fieldRelationship));
 //        }
 
-        for (CreateInstanceRelationship createInstanceRelationship : resultSet.getCreateInstanceRelationships()) {
-            uml.append(transform(createInstanceRelationship));
-        }
+//        for (InvokeRelationship invokeRelationship : resultSet.getInvokeRelationships()) {
+//            uml.append(transform(invokeRelationship));
+//        }
 
         for (AccessRelationship accessRelationship : resultSet.getAccessFieldRelationships()) {
             uml.append(transform(accessRelationship));
@@ -75,17 +75,17 @@ public class PlantUmlTransformer {
 //        return uml;
 //    }
 
-    private StringBuilder transform(@Nonnull final CreateInstanceRelationship createInstanceRelationship) {
-        StringBuilder uml = new StringBuilder();
-        uml.append(createInstanceRelationship.getInvokingExecutable().getName());
-        uml.append(" ");
-        uml.append("-[plain]-> ");
-        uml.append(createInstanceRelationship.getInvokedConstructor().getName());
-        uml.append(" ");
-        uml.append(": creates");
-        uml.append("\n");
-        return uml;
-    }
+//    private StringBuilder transform(@Nonnull final InvokeRelationship invokeRelationship) {
+//        StringBuilder uml = new StringBuilder();
+//        uml.append(invokeRelationship.getInvokingExecutable().getName());
+//        uml.append(" ");
+//        uml.append("-[plain]-> ");
+//        uml.append(invokeRelationship.getInvokedConstructor().getName());
+//        uml.append(" ");
+//        uml.append(": creates");
+//        uml.append("\n");
+//        return uml;
+//    }
 
     private StringBuilder transform(@Nonnull final AccessRelationship accessRelationship) {
         StringBuilder uml = new StringBuilder();

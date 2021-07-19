@@ -36,7 +36,7 @@ public class FieldInitializationWithAnonymousClassTest {
                 new OfTypeRelationship(field, runnable),
                 constructor,
                 new HasConstructorRelationship(typeWithNewInstance, constructor),
-                new CreateInstanceRelationship(constructor, anonymousClassConstructor));
+                new InvokeRelationship(constructor, anonymousClassConstructor));
 
         final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(FieldInitializationWithAnonymousClassTest.class);
 

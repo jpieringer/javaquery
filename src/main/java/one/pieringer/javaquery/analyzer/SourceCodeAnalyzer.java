@@ -105,7 +105,7 @@ public class SourceCodeAnalyzer {
 
                 final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(expr, context.typeDeclarations);
                 if (parentNamedCallable != null) {
-                    graphBuilder.addCreateInstanceRelationship(parentNamedCallable, constructor);
+                    graphBuilder.addInvokeRelationship(parentNamedCallable, constructor);
                     return;
                 }
 
@@ -233,7 +233,7 @@ public class SourceCodeAnalyzer {
                     graphBuilder.addAccessRelationship(constructor, accessedField);
                 }
                 for (ElementNames invokedConstructor : fieldInitializationStorage.getInvokedConstructors()) {
-                    graphBuilder.addCreateInstanceRelationship(constructor, invokedConstructor);
+                    graphBuilder.addInvokeRelationship(constructor, invokedConstructor);
                 }
                 for (ElementNames invokedMethod : fieldInitializationStorage.getInvokedMethods()) {
                     graphBuilder.addInvokeRelationship(constructor, invokedMethod);

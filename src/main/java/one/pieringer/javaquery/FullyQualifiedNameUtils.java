@@ -87,12 +87,6 @@ public class FullyQualifiedNameUtils {
         return field.fullyQualified() + " -[:OF_TYPE]-> " + type.fullyQualified();
     }
 
-    @Nonnull
-    public static String getFullyQualifiedCreateInstanceRelationshipName(@Nonnull final ElementNames invokingExecutable, @Nonnull final ElementNames createdType) {
-        Objects.requireNonNull(invokingExecutable);
-        Objects.requireNonNull(createdType);
-        return invokingExecutable.fullyQualified() + " -[:CREATE_INSTANCE]-> " + createdType.fullyQualified();
-    }
 
     @Nonnull
     public static String getFullyQualifiedAccessRelationshipName(@Nonnull final ElementNames invokingExecutable, @Nonnull final ElementNames field) {
@@ -107,6 +101,4 @@ public class FullyQualifiedNameUtils {
         Objects.requireNonNull(invokedExecutable);
         return invokingExecutable.fullyQualified() + " -[:INVOKE]-> " + invokedExecutable.fullyQualified();
     }
-
-
 }

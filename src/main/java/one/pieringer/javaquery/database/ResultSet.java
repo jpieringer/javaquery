@@ -9,8 +9,6 @@ import java.util.Set;
 
 public class ResultSet {
     @Nonnull
-    final Set<CreateInstanceRelationship> createInstanceRelationships;
-    @Nonnull
     final Set<InheritanceRelationship> inheritanceRelationships;
     @Nonnull
     final Set<InvokeRelationship> invokeRelationships;
@@ -19,21 +17,14 @@ public class ResultSet {
     @Nonnull
     final Set<Type> types;
 
-    public ResultSet(@Nonnull final Set<CreateInstanceRelationship> createInstanceRelationships,
-                     @Nonnull final Set<InheritanceRelationship> inheritanceRelationships,
+    public ResultSet(@Nonnull final Set<InheritanceRelationship> inheritanceRelationships,
                      @Nonnull final Set<InvokeRelationship> invokeRelationships,
                      @Nonnull final Set<AccessRelationship> accessRelationships,
                      @Nonnull final Set<Type> types) {
-        this.createInstanceRelationships = Objects.requireNonNull(createInstanceRelationships);
         this.inheritanceRelationships = Objects.requireNonNull(inheritanceRelationships);
         this.invokeRelationships = Objects.requireNonNull(invokeRelationships);
         this.accessRelationships = Objects.requireNonNull(accessRelationships);
         this.types = Objects.requireNonNull(types);
-    }
-
-    @Nonnull
-    public Set<CreateInstanceRelationship> getCreateInstanceRelationships() {
-        return createInstanceRelationships;
     }
 
     @Nonnull
@@ -58,8 +49,6 @@ public class ResultSet {
 
     public static class ResultSetBuilder {
         @Nonnull
-        private final Set<CreateInstanceRelationship> createInstanceRelationships = new HashSet<>();
-        @Nonnull
         private final Set<InheritanceRelationship> inheritanceRelationships = new HashSet<>();
         @Nonnull
         private final Set<InvokeRelationship> invokeRelationships = new HashSet<>();
@@ -69,12 +58,6 @@ public class ResultSet {
         private final Set<Type> types = new HashSet<>();
 
         public ResultSetBuilder() {
-        }
-
-        @Nonnull
-        public ResultSetBuilder addCreateInstanceRelationship(@Nonnull final CreateInstanceRelationship createInstanceRelationship) {
-            createInstanceRelationships.add(Objects.requireNonNull(createInstanceRelationship));
-            return this;
         }
 
         @Nonnull
@@ -108,7 +91,7 @@ public class ResultSet {
         }
 
         public ResultSet build() {
-            return new ResultSet(createInstanceRelationships, inheritanceRelationships, invokeRelationships, accessRelationships, types);
+            return new ResultSet(inheritanceRelationships, invokeRelationships, accessRelationships, types);
         }
     }
 }
