@@ -2,9 +2,7 @@ package one.pieringer.javaquery.analyzer;
 
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.*;
-import com.github.javaparser.ast.expr.FieldAccessExpr;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.ObjectCreationExpr;
+import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.github.javaparser.resolution.UnsolvedSymbolException;
@@ -429,6 +427,16 @@ public class SourceCodeAnalyzer {
         @Override
         public void visit(AnnotationDeclaration n, JavaFileContext arg) {
             LOG.debug("Ignoring annotation declaration of {} as it is not supported.", n.getName());
+        }
+
+        @Override
+        public void visit(NormalAnnotationExpr n, JavaFileContext arg) {
+            LOG.debug("Ignoring annotation expression of {} as it is not supported.", n.getName());
+        }
+
+        @Override
+        public void visit(SingleMemberAnnotationExpr n, JavaFileContext arg) {
+            LOG.debug("Ignoring annotation expression of {} as it is not supported.", n.getName());
         }
 
         private void rethrowIfNoResolveException(@Nonnull final ElementNames containingType,
