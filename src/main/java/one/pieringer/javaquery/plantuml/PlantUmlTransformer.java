@@ -2,7 +2,10 @@ package one.pieringer.javaquery.plantuml;
 
 import one.pieringer.javaquery.database.ResultSet;
 import one.pieringer.javaquery.model.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,43 +16,40 @@ public class PlantUmlTransformer {
     public static final String START_UML = "@startuml\n";
     public static final String END_UML = "@enduml\n";
 
+    private static final Logger LOG = LogManager.getLogger(PlantUmlTransformer.class);
+
     public String transform(@Nonnull final ResultSet resultSet, @Nonnull final Map<Type, List<String>> classToStereotypesMap) {
         Objects.requireNonNull(resultSet);
 
         StringBuilder uml = new StringBuilder();
         uml.append(START_UML);
 
-        for (Type clazz : resultSet.getTypes()) {
-            uml.append(transform(clazz, classToStereotypesMap.getOrDefault(clazz, new ArrayList<>())));
-        }
-
-        // // TODO implement me with the new data model
-//        for (HasFieldRelationship fieldRelationship : resultSet.getFieldRelationships()) {
-//            uml.append(transform(fieldRelationship));
-//        }
-
-//        for (InvokeRelationship invokeRelationship : resultSet.getInvokeRelationships()) {
-//            uml.append(transform(invokeRelationship));
-//        }
-
-        for (AccessRelationship accessRelationship : resultSet.getAccessFieldRelationships()) {
-            uml.append(transform(accessRelationship));
-        }
-
-        for (InvokeRelationship invokeRelationship : resultSet.getInvokeRelationships()) {
-            uml.append(transform(invokeRelationship));
-        }
-
-        for (InheritanceRelationship inheritanceRelationship : resultSet.getInheritanceRelationships()) {
-            uml.append(transform(inheritanceRelationship));
-        }
+        addTypes(resultSet, classToStereotypesMap, uml);
+        addInheritanceArrow(resultSet, uml);
+        addHasFieldArrow(resultSet, uml);
+        addInvokeArrow(resultSet, uml);
+        addCreateArrow(resultSet, uml);
+        addAccessArrow(resultSet, uml);
 
         uml.append(END_UML);
 
         return uml.toString();
     }
 
-    private StringBuilder transform(@Nonnull final Type clazz, @Nonnull final List<String> stereotypes) {
+    private void addTypes(@Nonnull final ResultSet resultSet, @Nonnull final Map<Type, List<String>> classToStereotypesMap, @Nonnull final StringBuilder uml) {
+        Objects.requireNonNull(resultSet);
+        Objects.requireNonNull(classToStereotypesMap);
+        Objects.requireNonNull(uml);
+
+        for (Type clazz : resultSet.getTypes()) {
+            uml.append(addType(clazz, classToStereotypesMap.getOrDefault(clazz, new ArrayList<>())));
+        }
+    }
+
+    private StringBuilder addType(@Nonnull final Type clazz, @Nonnull final List<String> stereotypes) {
+        Objects.requireNonNull(clazz);
+        Objects.requireNonNull(stereotypes);
+
         StringBuilder uml = new StringBuilder();
         uml.append("class ");
         uml.append(clazz.getName());
@@ -62,56 +62,19 @@ public class PlantUmlTransformer {
         uml.append("}\n");
         return uml;
     }
-// TODO implement me with the new data model
-//    private StringBuilder transform(@Nonnull final HasFieldRelationship fieldRelationship) {
-//        StringBuilder uml = new StringBuilder();
-//        uml.append(fieldRelationship.getContainingType().getName());
-//        uml.append(" ");
-//        uml.append("-[bold]-> ");
-//        uml.append(fieldRelationship.getFieldType().getName());
-//        uml.append(" ");
-//        uml.append(": has-field");
-//        uml.append("\n");
-//        return uml;
-//    }
 
-//    private StringBuilder transform(@Nonnull final InvokeRelationship invokeRelationship) {
-//        StringBuilder uml = new StringBuilder();
-//        uml.append(invokeRelationship.getInvokingExecutable().getName());
-//        uml.append(" ");
-//        uml.append("-[plain]-> ");
-//        uml.append(invokeRelationship.getInvokedConstructor().getName());
-//        uml.append(" ");
-//        uml.append(": creates");
-//        uml.append("\n");
-//        return uml;
-//    }
+    private void addInheritanceArrow(@Nonnull final ResultSet resultSet, @Nonnull final StringBuilder uml) {
+        Objects.requireNonNull(resultSet);
+        Objects.requireNonNull(uml);
 
-    private StringBuilder transform(@Nonnull final AccessRelationship accessRelationship) {
-        StringBuilder uml = new StringBuilder();
-        uml.append(accessRelationship.getAccessingExecutable().getName());
-        uml.append(" ");
-        uml.append("-[dashed]-> ");
-        uml.append(accessRelationship.getField().getName());
-        uml.append(" ");
-        uml.append(": accesses");
-        uml.append("\n");
-        return uml;
+        for (InheritanceRelationship inheritanceRelationship : resultSet.getInheritanceRelationships()) {
+            uml.append(addInheritanceArrow(inheritanceRelationship));
+        }
     }
 
-    private StringBuilder transform(@Nonnull final InvokeRelationship invokeRelationship) {
-        StringBuilder uml = new StringBuilder();
-        uml.append(invokeRelationship.getInvokingExecutable().getName());
-        uml.append(" ");
-        uml.append("-[dotted]-> ");
-        uml.append(invokeRelationship.getInvokedExecutable().getName());
-        uml.append(" ");
-        uml.append(": invokes");
-        uml.append("\n");
-        return uml;
-    }
+    private StringBuilder addInheritanceArrow(@Nonnull final InheritanceRelationship inheritanceRelationship) {
+        Objects.requireNonNull(inheritanceRelationship);
 
-    private StringBuilder transform(@Nonnull final InheritanceRelationship inheritanceRelationship) {
         StringBuilder uml = new StringBuilder();
         uml.append(inheritanceRelationship.getSubType().getName());
         uml.append(" ");
@@ -119,6 +82,173 @@ public class PlantUmlTransformer {
         uml.append(inheritanceRelationship.getSuperType().getName());
         uml.append(" ");
         uml.append(": inherits");
+        uml.append("\n");
+        return uml;
+    }
+
+    private void addHasFieldArrow(@Nonnull final ResultSet resultSet, @Nonnull final StringBuilder uml) {
+        Objects.requireNonNull(resultSet);
+        Objects.requireNonNull(uml);
+
+        for (HasFieldRelationship hasFieldRelationship : resultSet.getHasFieldRelationships()) {
+            final Type declaringType = hasFieldRelationship.getDeclaringType();
+
+            final OfTypeRelationship ofTypeRelationship = resultSet.getOfTypeRelationship(hasFieldRelationship.getField());
+            if (ofTypeRelationship == null) {
+                LOG.warn("Could not find an OfTypeRelationship for the HasFieldRelationship {}. Ignoring it.", hasFieldRelationship);
+                continue;
+            }
+
+            uml.append(addHasFieldArrow(declaringType, ofTypeRelationship.getFieldType()));
+        }
+    }
+
+    private StringBuilder addHasFieldArrow(@Nonnull final Type declaringType, @Nonnull final Type fieldType) {
+        Objects.requireNonNull(declaringType);
+        Objects.requireNonNull(fieldType);
+
+        StringBuilder uml = new StringBuilder();
+        uml.append(declaringType.getName());
+        uml.append(" ");
+        uml.append("-[bold]-> ");
+        uml.append(fieldType.getName());
+        uml.append(" ");
+        uml.append(": has-field");
+        uml.append("\n");
+        return uml;
+    }
+
+    private void addInvokeArrow(@Nonnull final ResultSet resultSet, @Nonnull final StringBuilder uml) {
+        Objects.requireNonNull(resultSet);
+        Objects.requireNonNull(uml);
+
+        for (InvokeRelationship invokeRelationship : resultSet.getInvokeRelationships()) {
+            final Type fromType = getDeclaringType(invokeRelationship.getInvokingExecutable(), resultSet);
+            if (fromType == null) {
+                LOG.warn("Could not find an HasConstructorRelationship or HasMethodRelationship for the InvokeRelationship {}. Ignoring it.", invokeRelationship);
+                continue;
+            }
+
+            if (!(invokeRelationship.getInvokedExecutable() instanceof Method)) {
+                continue;
+            }
+            final HasMethodRelationship hasMethodRelationship = resultSet.getHasMethodRelationship((Method) invokeRelationship.getInvokedExecutable());
+            if (hasMethodRelationship == null) {
+                LOG.warn("Could not find an HasMethodRelationship for the InvokeRelationship {}. Ignoring it.", invokeRelationship);
+                continue;
+            }
+            Type toType = hasMethodRelationship.getDeclaringType();
+
+            uml.append(addInvokeArrow(fromType, toType, invokeRelationship.getInvokedExecutable()));
+        }
+    }
+
+    @CheckForNull
+    private Type getDeclaringType(@Nonnull final Executable executable, @Nonnull final ResultSet resultSet) {
+        if (executable instanceof Constructor constructor) {
+            final HasConstructorRelationship hasConstructorRelationship = resultSet.getHasConstructorRelationship(constructor);
+            if (hasConstructorRelationship == null) {
+                return null;
+            }
+            return hasConstructorRelationship.getDeclaringType();
+        } else if (executable instanceof Method method) {
+            final HasMethodRelationship hasMethodRelationship = resultSet.getHasMethodRelationship(method);
+            if (hasMethodRelationship == null) {
+                return null;
+            }
+            return hasMethodRelationship.getDeclaringType();
+        }
+
+        throw new AssertionError("Unknown child class of Executable " + executable.getClass());
+    }
+
+    @Nonnull
+    private StringBuilder addInvokeArrow(@Nonnull final Type fromType, @Nonnull final Type toType, @Nonnull final Executable executable) {
+        Objects.requireNonNull(fromType);
+        Objects.requireNonNull(toType);
+
+        StringBuilder uml = new StringBuilder();
+        uml.append(fromType.getName());
+        uml.append(" ");
+        uml.append("-[dotted]-> ");
+        uml.append(toType.getName());
+        uml.append(" ");
+        uml.append(": invokes " + executable.getName());
+        uml.append("\n");
+        return uml;
+    }
+
+    private void addCreateArrow(@Nonnull final ResultSet resultSet, @Nonnull final StringBuilder uml) {
+        Objects.requireNonNull(resultSet);
+        Objects.requireNonNull(uml);
+
+        for (InvokeRelationship invokeRelationship : resultSet.getInvokeRelationships()) {
+            final Type fromType = getDeclaringType(invokeRelationship.getInvokingExecutable(), resultSet);
+            if (fromType == null) {
+                LOG.warn("Could not find an HasConstructorRelationship or HasMethodRelationship for the InvokeRelationship {}. Ignoring it.", invokeRelationship);
+                continue;
+            }
+
+            if (!(invokeRelationship.getInvokedExecutable() instanceof Constructor)) {
+                continue;
+            }
+            final HasConstructorRelationship hasConstructorRelationship = resultSet.getHasConstructorRelationship((Constructor) invokeRelationship.getInvokedExecutable());
+            if (hasConstructorRelationship == null) {
+                LOG.warn("Could not find an HasConstructorRelationship for the InvokeRelationship {}. Ignoring it.", invokeRelationship);
+                continue;
+            }
+            final Type toType = hasConstructorRelationship.getDeclaringType();
+
+            uml.append(addCreateArrow(fromType, toType));
+        }
+    }
+
+    @Nonnull
+    private StringBuilder addCreateArrow(@Nonnull final Type fromType, @Nonnull final Type toType) {
+        Objects.requireNonNull(fromType);
+        Objects.requireNonNull(toType);
+
+        StringBuilder uml = new StringBuilder();
+        uml.append(fromType.getName());
+        uml.append(" ");
+        uml.append("-[plain]-> ");
+        uml.append(toType.getName());
+        uml.append(" ");
+        uml.append(": creates");
+        uml.append("\n");
+        return uml;
+    }
+
+    private void addAccessArrow(@Nonnull final ResultSet resultSet, @Nonnull final StringBuilder uml) {
+        Objects.requireNonNull(resultSet);
+        Objects.requireNonNull(uml);
+
+        for (AccessRelationship accessRelationship : resultSet.getAccessRelationships()) {
+            final Type accessingType = getDeclaringType(accessRelationship.getAccessingExecutable(), resultSet);
+            if (accessingType == null) {
+                LOG.warn("Could not find an HasConstructorRelationship or HasMethodRelationship for the AccessRelationship {}. Ignoring it.", accessRelationship);
+                continue;
+            }
+
+            final HasFieldRelationship hasFieldRelationship = resultSet.getHasFieldRelationship(accessRelationship.getField());
+            if (hasFieldRelationship == null) {
+                LOG.warn("Could not find an HasFieldRelationship for the AccessRelationship {}. Ignoring it.", accessRelationship);
+                continue;
+            }
+
+            uml.append(addAccessArrow(accessingType, hasFieldRelationship.getDeclaringType(), accessRelationship.getField()));
+        }
+    }
+
+    @Nonnull
+    private StringBuilder addAccessArrow(@Nonnull final Type accessingType, @Nonnull final Type declaringType, @Nonnull final Field field) {
+        StringBuilder uml = new StringBuilder();
+        uml.append(accessingType.getName());
+        uml.append(" ");
+        uml.append("-[dashed]-> ");
+        uml.append(declaringType.getName());
+        uml.append(" ");
+        uml.append(": accesses " + field.getName());
         uml.append("\n");
         return uml;
     }

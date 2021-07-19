@@ -51,16 +51,20 @@ public class GraphPersistence {
     }
 
     private void fillResultSetBuilder(Object entry, ResultSet.ResultSetBuilder resultSetBuilder) {
-        // TODO re-add create instance support
-        //        if (entry instanceof InvokeRelationship) {
-//            resultSetBuilder.addInvokeRelationship((InvokeRelationship) entry);
-//        } else
-            if (entry instanceof InheritanceRelationship) {
+        if (entry instanceof HasFieldRelationship) {
+            resultSetBuilder.addHasFieldRelationship((HasFieldRelationship) entry);
+        } else if (entry instanceof OfTypeRelationship) {
+            resultSetBuilder.addOfTypeRelationship((OfTypeRelationship) entry);
+        } else if (entry instanceof InheritanceRelationship) {
             resultSetBuilder.addInheritanceRelationship((InheritanceRelationship) entry);
         } else if (entry instanceof InvokeRelationship) {
             resultSetBuilder.addInvokeRelationship((InvokeRelationship) entry);
         } else if (entry instanceof AccessRelationship) {
             resultSetBuilder.addAccessFieldRelationship((AccessRelationship) entry);
+        } else if (entry instanceof HasMethodRelationship) {
+            resultSetBuilder.addHasMethodRelationship((HasMethodRelationship) entry);
+        } else if (entry instanceof HasConstructorRelationship) {
+            resultSetBuilder.addHasConstructorRelationship((HasConstructorRelationship) entry);
         } else if (entry instanceof Type) {
             resultSetBuilder.addType((Type) entry);
         } else if (entry instanceof Collection) {
