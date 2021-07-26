@@ -87,7 +87,7 @@ tasks {
         dependsOn(integrationTest)
     }
 
-    named<DefaultTask>("docker") {
+    named<DefaultTask>("dockerPrepare") {
         dependsOn(build)
     }
 
