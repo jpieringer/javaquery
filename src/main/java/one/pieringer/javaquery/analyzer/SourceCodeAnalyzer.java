@@ -81,6 +81,7 @@ public class SourceCodeAnalyzer {
                 if (resolvedConstructorDeclaration.declaringType() instanceof final JavaParserAnonymousClassDeclaration anonymousClassDeclaration) {
                     createdType = FullyQualifiedNameUtils.getAnonymousClassName(containingType, context.anonymousTypeDeclarationsCounter, anonymousClassDeclaration.getSuperTypeDeclaration().getName());
                     context.typeDeclarations.put(expr, createdType);
+                    context.fieldInitializationStorageMap.put(createdType, new FieldInitializationStorage());
                     context.anonymousTypeDeclarationsCounter++;
 
                     final ElementNames superType = javaParserWrapper.getSimplifiedType(anonymousClassDeclaration.getSuperClass().orElseThrow());
