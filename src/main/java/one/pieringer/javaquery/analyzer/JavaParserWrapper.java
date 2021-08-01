@@ -3,6 +3,7 @@ package one.pieringer.javaquery.analyzer;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.*;
@@ -10,11 +11,12 @@ import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.PrimitiveType;
 import com.github.javaparser.ast.type.Type;
-import com.github.javaparser.resolution.declarations.ResolvedParameterDeclaration;
+import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedReferenceTypeDeclaration;
 import com.github.javaparser.resolution.types.ResolvedReferenceType;
 import com.github.javaparser.resolution.types.ResolvedType;
 import one.pieringer.javaquery.FullyQualifiedNameUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -96,7 +98,7 @@ public class JavaParserWrapper {
     }
 
     /**
-     * Gets the type that should be used within the graph. E.g. Arrays are reduced to the type of the single element.
+     * Gets the type that should be used for defining the exact name of a method incl. the parameter types
      */
     @Nonnull
     public ElementNames getExactType(@Nonnull final ResolvedType resolvedType) {
@@ -138,10 +140,59 @@ public class JavaParserWrapper {
     public List<ElementNames> getParameterTypes(@Nonnull final NodeList<Parameter> parameters) {
         Objects.requireNonNull(parameters);
 
-        return parameters.stream().map(p -> {
-            final ResolvedParameterDeclaration resolvedParameterDeclaration = p.resolve();
-            return getExactType(resolvedParameterDeclaration.getType());
-        }).collect(Collectors.toList());
+        return parameters.stream()
+                .map(this::getParameterType)
+                .collect(Collectors.toList());
+    }
+
+    @Nonnull
+    private ElementNames getParameterType(@Nonnull final Parameter parameter) {
+        Objects.requireNonNull(parameter);
+
+        try {
+            return getExactType(parameter.resolve().getType());
+        } catch (UnsolvedSymbolException e) {
+            if (parameter.findCompilationUnit().isEmpty()) {
+                throw e;
+            }
+
+            final ElementNames type = getExactTypeViaImports(parameter.getType(), parameter.findCompilationUnit().get().getImports());
+            if (type == null) {
+                throw e;
+            }
+
+            return type;
+        }
+    }
+
+    /**
+     * Get the exact name by looking at the imports and check for a class name match.
+     * Warning: This could be wrong in case the import is unused and the type is actually an inner class.
+     */
+    @CheckForNull
+    private ElementNames getExactTypeViaImports(@Nonnull final Type type, @Nonnull final NodeList<ImportDeclaration> importDeclarations) {
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(importDeclarations);
+
+        if (type.isArrayType()) {
+            final ElementNames componentType = getExactTypeViaImports(type.asArrayType().getComponentType(), importDeclarations);
+            if (componentType == null) {
+                return null;
+            }
+
+            return new ElementNames(componentType.fullyQualified() + "[]", componentType.simple() + "[]");
+        }
+
+        if (type.isReferenceType()) {
+            final String simpleTypeName = type.asString();
+            for (ImportDeclaration importDeclaration : importDeclarations) {
+                if (StringUtils.equals(importDeclaration.getName().getIdentifier(), simpleTypeName)) {
+                    return new ElementNames(importDeclaration.getNameAsString(), importDeclaration.getName().getIdentifier());
+                }
+            }
+        }
+
+        return null;
     }
 
     @CheckForNull

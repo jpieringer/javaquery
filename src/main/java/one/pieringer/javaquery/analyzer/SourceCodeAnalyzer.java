@@ -1,8 +1,30 @@
 package one.pieringer.javaquery.analyzer;
 
+import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import com.github.javaparser.ast.Node;
-import com.github.javaparser.ast.body.*;
-import com.github.javaparser.ast.expr.*;
+import com.github.javaparser.ast.body.AnnotationDeclaration;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.ConstructorDeclaration;
+import com.github.javaparser.ast.body.EnumConstantDeclaration;
+import com.github.javaparser.ast.body.EnumDeclaration;
+import com.github.javaparser.ast.body.FieldDeclaration;
+import com.github.javaparser.ast.body.InitializerDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.VariableDeclarator;
+import com.github.javaparser.ast.expr.FieldAccessExpr;
+import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.NormalAnnotationExpr;
+import com.github.javaparser.ast.expr.ObjectCreationExpr;
+import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.github.javaparser.resolution.UnsolvedSymbolException;
@@ -14,11 +36,6 @@ import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParse
 import com.google.common.collect.Iterables;
 import one.pieringer.javaquery.FullyQualifiedNameUtils;
 import one.pieringer.javaquery.model.GraphBuilder;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import javax.annotation.Nonnull;
-import java.util.*;
 
 public class SourceCodeAnalyzer {
 
