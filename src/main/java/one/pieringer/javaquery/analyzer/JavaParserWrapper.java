@@ -183,8 +183,8 @@ public class JavaParserWrapper {
             return new ElementNames(componentType.fullyQualified() + "[]", componentType.simple() + "[]");
         }
 
-        if (type.isReferenceType()) {
-            final String simpleTypeName = type.asString();
+        if (type.isClassOrInterfaceType()) {
+            final String simpleTypeName = ((ClassOrInterfaceType) type).getName().getIdentifier();
             for (ImportDeclaration importDeclaration : importDeclarations) {
                 if (StringUtils.equals(importDeclaration.getName().getIdentifier(), simpleTypeName)) {
                     return new ElementNames(importDeclaration.getNameAsString(), importDeclaration.getName().getIdentifier());
