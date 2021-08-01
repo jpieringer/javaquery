@@ -214,9 +214,9 @@ public class SourceCodeAnalyzer {
                     graphBuilder.addType(superType);
                     graphBuilder.addInheritsRelationship(declaredType, superType);
                 } catch (UnsolvedSymbolException e) {
-                    LOG.debug("Symbol resolving failed in {}. Ignoring class declaration {}. Message: {}", declaredType.fullyQualified(), declaredType.fullyQualified(), e.getMessage());
+                    LOG.debug("Symbol resolving failed in {}. Ignoring super type {}. Message: {}", declaredType.fullyQualified(), type.getNameAsString(), e.getMessage());
                 } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                    LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring class declaration {}. Message: {}", declaredType.fullyQualified(), declaredType.fullyQualified(), e.getMessage());
+                    LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring super type {}. Message: {}", declaredType.fullyQualified(), type.getNameAsString(), e.getMessage());
                 } catch (RuntimeException e) {
                     rethrowIfNoResolveException(declaredType, e);
                 }

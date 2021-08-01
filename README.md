@@ -154,6 +154,7 @@ Describes that a field is of a given type.
 - Enum constant declarations (they are ignored)
 - Annotation declarations (they are ignored)
 - Static initializers (they are ignored)
+- Fields, Methods invocations,... with unresolvable types are ignored
 
 ## Known issues
 - For unresolved classes the imports are used as fallback. E.g. if the class ClassFromLibrary cannot be resolved, it is tried to find the full name from the imports, e.g. "import mypkg.ClassFromLibrary". This can be wrong if the import is actually unused and a inner class with the same name exists. 
