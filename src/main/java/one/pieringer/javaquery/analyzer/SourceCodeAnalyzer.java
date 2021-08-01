@@ -12,6 +12,7 @@ import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserAnonymousClassDeclaration;
+import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserEnumConstantDeclaration;
 import com.google.common.collect.Iterables;
 import one.pieringer.javaquery.FullyQualifiedNameUtils;
 import one.pieringer.javaquery.model.GraphBuilder;
@@ -347,6 +348,21 @@ public class SourceCodeAnalyzer {
                     }
                 }
             } catch (UnsolvedSymbolException e) {
+                Optional<Node> parentNode = n.getParentNode();
+                while (parentNode.isPresent() && parentNode.get() instanceof FieldAccessExpr parentFieldAccessExpr) {
+                    try {
+                        if (parentFieldAccessExpr.resolve() instanceof JavaParserEnumConstantDeclaration) {
+                            // This is a known issue, see: https://github.com/javaparser/javaparser/issues/2442
+                            // The enum type itself is also treated as FieldAccessExpr and for it resolving fails.
+                            // e.g. MyClass.MyInnerEnum.EnumValue -> MyClass.MyInnerEnum is treated as FieldAccessExpr and for it resolving fails.
+                            return;
+                        }
+                    } catch (RuntimeException ignored) {
+                        // This is just a known issue detection. Ignore and continue with the original error.
+                    }
+                    parentNode = parentNode.get().getParentNode();
+                }
+
                 LOG.debug("Symbol resolving failed in {}. Ignoring field access expression '{}'. Message: {}", containingType.fullyQualified(), n, e.getMessage());
             } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
                 LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring field access expression '{}'. Message: {}", containingType.fullyQualified(), n, e.getMessage());
