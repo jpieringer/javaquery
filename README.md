@@ -31,7 +31,7 @@ docker run \
 ## Synopsis
 ```
 java -jar javaquery-full.jar 
-(-analyze <paths separated with ;>|-query <cypher query>)
+(-analyze <paths separated with ;> -dependencies <paths separated with;>|-query <cypher query>)
 [-databaseUri <database URI>]
 [-stereotype <name> -stereotypeQuery <cypher query>]*
 ```
@@ -39,6 +39,9 @@ java -jar javaquery-full.jar
 ## Options
 *-analyze <paths separated with ;>*
 Analyze the specified source directories and store the simplified AST in the database. Omit this parameter if the database of the last analysis should be used.
+
+*-dependencies <paths separated with;>*
+The specified dependency source directories and jar files are used for type resolution. This parameter is only evaluated if the -analyze parameter is used.
 
 *-query <cypher query>*
 Specify the cypher query that should be executed against the simplified AST. Omit this parameter if only the source code should be parsed and stored in the database.

@@ -33,7 +33,7 @@ public class AnalyzerTestRunner {
         final ArgumentCaptor<Set<Object>> actualElementsCaptor = ArgumentCaptor.forClass(Set.class);
         doNothing().when(graphPersistenceMock).persist(actualElementsCaptor.capture());
 
-        analyzer.analyze(Collections.singletonList(new File(testSourceDirectoryUrl.toURI()).getAbsolutePath()), graphPersistenceMock);
+        analyzer.analyze(Collections.singletonList(new File(testSourceDirectoryUrl.toURI()).getAbsolutePath()), Collections.emptyList(), graphPersistenceMock);
 
         return actualElementsCaptor.getAllValues().stream().flatMap(Set::stream).collect(Collectors.toSet());
     }

@@ -25,6 +25,7 @@ import java.util.*;
 public class Main {
 
     private static final String OPTION_ANALYZE = "analyze";
+    private static final String OPTION_DEPENDENCIES = "dependencies";
     private static final String OPTION_QUERY = "query";
     private static final String OPTION_DATABASE_URI = "databaseUri";
     private static final String OPTION_STEREOTYPE = "stereotype";
@@ -55,6 +56,7 @@ public class Main {
 
         final Options options = new Options();
         options.addOption(OPTION_ANALYZE, true, "Analyze the source code of the specified folders separated with a ';'.");
+        options.addOption(OPTION_DEPENDENCIES, true, "The dependencies of the source code that is used for resolving types. Jar files or folders separated with a ';'.");
         options.addOption(OPTION_QUERY, true, "Run the specified Cypher query.");
         options.addOption(OPTION_DATABASE_URI, true,
                 "The URI of the database that should be connected to. The embedded database is used if this parameter is omitted.");
@@ -66,11 +68,17 @@ public class Main {
         final CommandLine cmd = parser.parse(options, args);
 
         final String analyze = cmd.getOptionValue(OPTION_ANALYZE, null);
+        final String dependencyOptionString = cmd.getOptionValue(OPTION_DEPENDENCIES, null);
         final String query = cmd.getOptionValue(OPTION_QUERY, null);
 
         List<String> sourceDirectories = new ArrayList<>();
         if (analyze != null) {
             sourceDirectories = Arrays.asList(StringUtils.split(analyze, File.pathSeparator()));
+        }
+
+        List<String> dependencies = new ArrayList<>();
+        if (analyze != null) {
+            dependencies = Arrays.asList(StringUtils.split(dependencyOptionString, File.pathSeparator()));
         }
 
         final String[] stereotypes = ArrayUtils.nullToEmpty(cmd.getOptionValues(OPTION_STEREOTYPE));
@@ -88,6 +96,7 @@ public class Main {
         return new CommandLineOptions(
                 analyze != null,
                 sourceDirectories,
+                dependencies,
                 query,
                 stereotypeQueryMap,
                 cmd.getOptionValue(OPTION_DATABASE_URI, null),
@@ -123,7 +132,7 @@ public class Main {
 
         try {
             if (commandLineOptions.doAnalyze) {
-                analyzer.analyze(commandLineOptions.sourceDirectories, graphPersistence);
+                analyzer.analyze(commandLineOptions.sourceDirectories, commandLineOptions.dependencies, graphPersistence);
             }
 
             if (commandLineOptions.query != null) {
@@ -148,6 +157,8 @@ public class Main {
         final boolean doAnalyze;
         @Nonnull
         final List<String> sourceDirectories;
+        @Nonnull
+        final List<String> dependencies;
         @CheckForNull
         final String query;
         @Nonnull
@@ -160,13 +171,14 @@ public class Main {
         final String outPdfPath;
 
         public CommandLineOptions(final boolean doAnalyze, @Nonnull final List<String> sourceDirectories,
-                                  @CheckForNull final String query,
+                                  @Nonnull final List<String> dependencies, @CheckForNull final String query,
                                   @Nonnull final HashMap<String, String> stereotypeQueries,
                                   @CheckForNull final String databaseUri,
                                   @CheckForNull final String outSvgPath,
                                   @CheckForNull final String outPdfPath) {
             this.doAnalyze = doAnalyze;
             this.sourceDirectories = Objects.requireNonNull(sourceDirectories);
+            this.dependencies = Objects.requireNonNull(dependencies);
             this.query = query;
             this.stereotypeQueries = Objects.requireNonNull(stereotypeQueries);
             this.databaseUri = databaseUri;

@@ -1,12 +1,14 @@
 package one.pieringer.javaquery.analyzer;
 
 import one.pieringer.javaquery.database.GraphPersistence;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -24,8 +26,10 @@ public class Analyzer {
         this.sourceCodeAnalyzerFactory = Objects.requireNonNull(sourceCodeAnalyzerFactory);
     }
 
-    public void analyze(@Nonnull final List<String> sourceDirectories, @Nonnull final GraphPersistence graphPersistence) {
+    public void analyze(@Nonnull final List<String> sourceDirectories, @Nonnull final List<String> dependencies,
+                        @Nonnull final GraphPersistence graphPersistence) {
         Objects.requireNonNull(sourceDirectories);
+        Objects.requireNonNull(dependencies);
         Objects.requireNonNull(graphPersistence);
 
         LOG.info("Analyzing...");
@@ -33,7 +37,31 @@ public class Analyzer {
         final SourceCodeProvider sourceCodeProvider = new SourceCodeProvider(
                 sourceDirectories.stream().map(File::new).collect(Collectors.toList())
                         .toArray(new File[sourceDirectories.size()]));
-        final SourceCodeAnalyzer sourceCodeAnalyzer = sourceCodeAnalyzerFactory.create(sourceCodeProvider);
+
+        final List<File> dependencySourceDirectories = new ArrayList<>();
+        final List<File> dependencyJarFiles = new ArrayList<>();
+
+        for (String dependency : dependencies) {
+            final File dependencyFile = new File(dependency);
+
+            if (!dependencyFile.exists()) {
+                throw new IllegalArgumentException("The provided dependency '" + dependency + "' does not exist.");
+            }
+
+            if (dependencyFile.isFile()) {
+                if ("jar".equalsIgnoreCase(FilenameUtils.getExtension(dependency))) {
+                    dependencyJarFiles.add(dependencyFile);
+                } else {
+                    throw new IllegalArgumentException("The provided dependency '" + dependency + "' is a file but does not have the extension jar.");
+                }
+            } else if (dependencyFile.isDirectory()) {
+                dependencySourceDirectories.add(dependencyFile);
+            } else {
+                throw new IllegalArgumentException("The provided dependency '" + dependency + "' is not a file and not a directory.");
+            }
+        }
+
+        final SourceCodeAnalyzer sourceCodeAnalyzer = sourceCodeAnalyzerFactory.create(sourceCodeProvider, dependencySourceDirectories, dependencyJarFiles);
 
         StopWatch stopWatch = StopWatch.createStarted();
         final Set<Object> graph = sourceCodeAnalyzer.analyze(sourceCodeProvider);
