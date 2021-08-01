@@ -4,3 +4,5 @@ out
 .idea
 /database
 /output.svg
+app.log
+debug.log

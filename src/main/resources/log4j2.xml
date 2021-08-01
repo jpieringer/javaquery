@@ -4,10 +4,24 @@
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %c{1.} - %msg%n"/>
         </Console>
+        <File name="InfoLogFile" fileName="app.log">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %c{1.} - %msg%n"/>
+        </File>
+        <Async name="InfoLogFileAsync">
+            <AppenderRef ref="InfoLogFile"/>
+        </Async>
+        <File name="DebugLogFile" fileName="debug.log">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %c{1.} - %msg%n"/>
+        </File>
+        <Async name="DebugLogFileAsync">
+            <AppenderRef ref="DebugLogFile"/>
+        </Async>
     </Appenders>
     <Loggers>
-        <Root level="INFO">
-            <AppenderRef ref="Console"/>
+        <Root level="DEBUG">
+            <AppenderRef ref="Console" level="INFO"/>
+            <AppenderRef ref="InfoLogFileAsync" level="INFO"/>
+            <AppenderRef ref="DebugLogFileAsync" level="DEBUG"/>
         </Root>
     </Loggers>
 </Configuration>
