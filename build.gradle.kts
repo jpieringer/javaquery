@@ -21,7 +21,7 @@ sourceSets {
 }
 
 dependencies {
-    implementation("com.github.javaparser:javaparser-symbol-solver-core:3.22.1")
+    implementation("org.eclipse.jdt:org.eclipse.jdt.core:3.26.0")
     implementation("com.google.code.findbugs:jsr305:3.0.2")
     implementation("commons-io:commons-io:2.7")
     implementation("org.apache.commons:commons-lang3:3.10")
@@ -44,6 +44,7 @@ dependencies {
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.8")
     implementation("commons-cli:commons-cli:1.4")
+    implementation("com.google.guava:guava:30.1.1-jre")
 
     testImplementation(platform("org.junit:junit-bom:5.7.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -95,6 +96,43 @@ tasks {
         useJUnitPlatform()
         testLogging {
             events("passed", "skipped", "failed")
+        }
+    }
+
+    create<DefaultTask>("printClasspath") {
+        doLast {
+            println("Project Source")
+            sourceSets.main.get().java.srcDirs.forEach {
+                println(it.absolutePath.replace("\\build\\classes\\java\\main", "\\src\\main\\java"))
+            }
+
+            println("Dependencies via compileClasspath")
+            configurations.compileClasspath.get().resolve().forEach {
+                println(it.absolutePath.replace("\\build\\classes\\java\\main", "\\src\\main\\java"))
+            }
+
+            println("Dependencies via resolution result")
+            val dependencies = HashSet<File>()
+            dependencies.addAll(sourceSets.main.get().java.srcDirs)
+            configurations.compileClasspath.get().incoming.resolutionResult.allDependencies.forEach { dependency ->
+                when (val requested = dependency.requested) {
+                    is ProjectComponentSelector -> {
+                        dependencies.addAll(project.rootProject.project(requested.displayName.substring(8)).sourceSets.main.get().java.srcDirs)
+                    }
+                    is ModuleComponentSelector -> {
+                        val path = configurations.compileClasspath.get().files { dependencyUnderTest ->
+                            dependencyUnderTest.group == requested.group &&
+                                    dependencyUnderTest.name == requested.module &&
+                                    dependencyUnderTest.version == requested.version
+                        }
+                        dependencies.addAll(path)
+                    }
+                    else -> {
+                        println(" -- None")
+                    }
+                }
+            }
+            dependencies.forEach { singleArtifact -> println(singleArtifact) }
         }
     }
 }

@@ -9,12 +9,22 @@ import java.util.stream.Collectors;
 
 public class FullyQualifiedNameUtils {
     @Nonnull
-    public static ElementNames getAnonymousClassName(@Nonnull final ElementNames containingType, final int anonymousTypeDeclarationsCounter, @Nonnull final String name) {
+    public static ElementNames getAnonymousClassName(@Nonnull final ElementNames containingType, final int anonymousTypeDeclarationsCounter) {
         Objects.requireNonNull(containingType);
-        Objects.requireNonNull(name);
 
-        final String fullyQualifiedName = containingType.fullyQualified() + "$" + anonymousTypeDeclarationsCounter + name;
-        final String simpleName = containingType.simple() + "$" + anonymousTypeDeclarationsCounter + name;
+        final String fullyQualifiedName = containingType.fullyQualified() + "$" + anonymousTypeDeclarationsCounter;
+        final String simpleName = containingType.simple() + "$" + anonymousTypeDeclarationsCounter;
+
+        return new ElementNames(fullyQualifiedName, simpleName);
+    }
+
+    @Nonnull
+    public static ElementNames getLocalClassName(@Nonnull final ElementNames containingType, final int anonymousTypeDeclarationsCounter, @Nonnull final String localClassName) {
+        Objects.requireNonNull(containingType);
+        Objects.requireNonNull(localClassName);
+
+        final String fullyQualifiedName = containingType.fullyQualified() + "$" + anonymousTypeDeclarationsCounter + localClassName;
+        final String simpleName = containingType.simple() + "$" + anonymousTypeDeclarationsCounter + localClassName;
 
         return new ElementNames(fullyQualifiedName, simpleName);
     }

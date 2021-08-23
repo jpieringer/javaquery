@@ -1,11 +1,5 @@
 package one.pieringer.javaquery.analyzer;
 
-import one.pieringer.javaquery.database.GraphPersistence;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.time.StopWatch;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.util.ArrayList;
@@ -14,6 +8,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.time.StopWatch;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import one.pieringer.javaquery.database.GraphPersistence;
 
 public class Analyzer {
 
@@ -34,10 +34,6 @@ public class Analyzer {
 
         LOG.info("Analyzing...");
 
-        final SourceCodeProvider sourceCodeProvider = new SourceCodeProvider(
-                sourceDirectories.stream().map(File::new).collect(Collectors.toList())
-                        .toArray(new File[sourceDirectories.size()]));
-
         final List<File> dependencySourceDirectories = new ArrayList<>();
         final List<File> dependencyJarFiles = new ArrayList<>();
 
@@ -45,10 +41,8 @@ public class Analyzer {
             final File dependencyFile = new File(dependency);
 
             if (!dependencyFile.exists()) {
-                throw new IllegalArgumentException("The provided dependency '" + dependency + "' does not exist.");
-            }
-
-            if (dependencyFile.isFile()) {
+                LOG.warn("The following file does not exist {}.", dependencyFile);
+            } else if (dependencyFile.isFile()) {
                 if ("jar".equalsIgnoreCase(FilenameUtils.getExtension(dependency))) {
                     dependencyJarFiles.add(dependencyFile);
                 } else {
@@ -61,7 +55,12 @@ public class Analyzer {
             }
         }
 
-        final SourceCodeAnalyzer sourceCodeAnalyzer = sourceCodeAnalyzerFactory.create(sourceCodeProvider, dependencySourceDirectories, dependencyJarFiles);
+        final SourceCodeProvider sourceCodeProvider = new SourceCodeProvider(
+                sourceDirectories.stream().map(File::new).collect(Collectors.toList()),
+                dependencySourceDirectories,
+                dependencyJarFiles);
+
+        final SourceCodeAnalyzer sourceCodeAnalyzer = sourceCodeAnalyzerFactory.create();
 
         StopWatch stopWatch = StopWatch.createStarted();
         final Set<Object> graph = sourceCodeAnalyzer.analyze(sourceCodeProvider);

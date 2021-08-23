@@ -1,36 +1,31 @@
 package one.pieringer.javaquery.analyzer;
 
-import com.github.javaparser.ast.Node;
-import com.github.javaparser.ast.body.*;
-import com.github.javaparser.ast.expr.*;
-import com.github.javaparser.ast.type.ClassOrInterfaceType;
-import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
-import com.github.javaparser.resolution.MethodAmbiguityException;
-import com.github.javaparser.resolution.UnsolvedSymbolException;
-import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclaration;
-import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration;
-import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
-import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
-import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserAnonymousClassDeclaration;
-import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserEnumConstantDeclaration;
-import com.google.common.collect.Iterables;
 import one.pieringer.javaquery.FullyQualifiedNameUtils;
 import one.pieringer.javaquery.model.GraphBuilder;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.compiler.IProblem;
+import org.eclipse.jdt.core.dom.*;
 
 import javax.annotation.Nonnull;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class SourceCodeAnalyzer {
 
     private static final Logger LOG = LogManager.getLogger(SourceCodeAnalyzer.class);
 
     @Nonnull
-    private final JavaParserWrapper javaParserWrapper;
+    private final ASTUtils astUtils;
 
-    public SourceCodeAnalyzer(@Nonnull final JavaParserWrapper javaParserWrapper) {
-        this.javaParserWrapper = Objects.requireNonNull(javaParserWrapper);
+    public SourceCodeAnalyzer(@Nonnull final ASTUtils astUtils) {
+        this.astUtils = Objects.requireNonNull(astUtils);
     }
 
     @Nonnull
@@ -38,175 +33,124 @@ public class SourceCodeAnalyzer {
         Objects.requireNonNull(sourceCodeProvider);
 
         final GraphBuilder graphBuilder = new GraphBuilder();
-        final Visitor visitor = new Visitor(javaParserWrapper, graphBuilder);
+        final Visitor visitor = new Visitor(graphBuilder, astUtils);
 
-        sourceCodeProvider.visitJavaFiles(javaFile -> {
+        final List<String> sourcePathEntries = sourceCodeProvider.getSourceFolders().stream().map(File::getAbsolutePath).collect(Collectors.toList());
+        sourcePathEntries.addAll(sourceCodeProvider.getDependencySourceDirectories().stream().map(File::getAbsolutePath).collect(Collectors.toList()));
+        final List<String> classPathEntries = sourceCodeProvider.getDependencyJarFiles().stream().map(File::getAbsolutePath).collect(Collectors.toList());
+
+        sourceCodeProvider.visitJavaFiles((project, javaFile) -> {
+            ASTParser parser = ASTParser.newParser(AST.JLS_Latest);
+            parser.setResolveBindings(true);
+            parser.setKind(ASTParser.K_COMPILATION_UNIT);
+            parser.setBindingsRecovery(true);
+            final Hashtable<String, String> options = JavaCore.getOptions();
+            options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.latestSupportedJavaVersion());
+            options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.latestSupportedJavaVersion());
+            options.put(JavaCore.COMPILER_SOURCE, JavaCore.latestSupportedJavaVersion());
+            parser.setCompilerOptions(options);
+            parser.setEnvironment(classPathEntries.toArray(String[]::new), sourcePathEntries.toArray(new String[0]), sourcePathEntries.stream().map(f -> StandardCharsets.UTF_8.name()).toArray(String[]::new), true);
+
+            parser.setUnitName(javaFile.getAbsolutePath().replace(project.getAbsolutePath(), ""));
             try {
-                visitor.visit(javaParserWrapper.parseFile(javaFile), new JavaFileContext());
-            } catch (RuntimeException e) {
-                throw new RuntimeException("Failed to analyze file " + javaFile.getAbsolutePath(), e);
+                final String currentJavaFileName = FilenameUtils.removeExtension(javaFile.getName());
+
+                parser.setSource(Files.readString(javaFile.toPath()).toCharArray());
+
+                CompilationUnit compilationUnit = (CompilationUnit) parser.createAST(null);
+                for (IProblem problem : compilationUnit.getProblems()) {
+                    if (problem.isError()) {
+                        LOG.debug("Compilation error in '" + currentJavaFileName + "': " + problem);
+                    }
+                }
+
+                visitor.setContext(new Visitor.JavaFileContext(currentJavaFileName));
+                compilationUnit.accept(visitor);
+            } catch (RuntimeException | IOException e) {
+                throw new RuntimeException("Failed to analyze file '" + javaFile.getAbsolutePath() + "'", e);
             } catch (AssertionError e) {
-                throw new AssertionError("Failed to analyze file " + javaFile.getAbsolutePath(), e);
+                throw new AssertionError("Failed to analyze file '" + javaFile.getAbsolutePath() + "'", e);
             }
         });
 
         return graphBuilder.getGraph();
     }
 
-    private static class Visitor extends VoidVisitorAdapter<JavaFileContext> {
-        @Nonnull
-        private final JavaParserWrapper javaParserWrapper;
+    private static class Visitor extends ASTVisitor {
         @Nonnull
         private final GraphBuilder graphBuilder;
+        @Nonnull
+        private final ASTUtils astUtils;
+        @Nonnull
+        private JavaFileContext context;
 
-        public Visitor(@Nonnull final JavaParserWrapper javaParserWrapper, @Nonnull final GraphBuilder graphBuilder) {
-            this.javaParserWrapper = Objects.requireNonNull(javaParserWrapper);
+        public Visitor(@Nonnull final GraphBuilder graphBuilder, @Nonnull final ASTUtils astUtils) {
             this.graphBuilder = Objects.requireNonNull(graphBuilder);
+            this.astUtils = Objects.requireNonNull(astUtils);
+            this.context = new JavaFileContext("<not-initialized>");
+        }
+
+        public void setContext(@Nonnull final JavaFileContext context) {
+            this.context = Objects.requireNonNull(context);
         }
 
         @Override
-        public void visit(ObjectCreationExpr expr, JavaFileContext context) {
-            performVisit(expr, context);
-            super.visit(expr, context);
-        }
+        public boolean visit(final TypeDeclaration node) {
+            Objects.requireNonNull(node);
 
-        private void performVisit(@Nonnull final ObjectCreationExpr expr, @Nonnull final JavaFileContext context) {
-            Objects.requireNonNull(expr);
-            Objects.requireNonNull(context);
-
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(expr, context.typeDeclarations);
-
-            try {
-                final ResolvedConstructorDeclaration resolvedConstructorDeclaration = expr.resolve();
-
-                ElementNames createdType;
-                if (resolvedConstructorDeclaration.declaringType() instanceof final JavaParserAnonymousClassDeclaration anonymousClassDeclaration) {
-                    createdType = FullyQualifiedNameUtils.getAnonymousClassName(containingType, context.anonymousTypeDeclarationsCounter, anonymousClassDeclaration.getSuperTypeDeclaration().getName());
-                    context.typeDeclarations.put(expr, createdType);
-                    context.fieldInitializationStorageMap.put(createdType, new FieldInitializationStorage());
-                    context.anonymousTypeDeclarationsCounter++;
-
-                    final ElementNames superType = javaParserWrapper.getSimplifiedType(anonymousClassDeclaration.getSuperClass().orElseThrow());
-                    graphBuilder.addType(createdType);
-                    graphBuilder.addType(superType);
-                    graphBuilder.addInheritsRelationship(createdType, superType);
-                } else {
-                    createdType = new ElementNames(resolvedConstructorDeclaration.declaringType().getQualifiedName(), resolvedConstructorDeclaration.declaringType().getName());
-                    graphBuilder.addType(createdType);
-                }
-
-                final List<ElementNames> parameterTypes = new ArrayList<>(resolvedConstructorDeclaration.getNumberOfParams());
-                for (int i = 0; i < resolvedConstructorDeclaration.getNumberOfParams(); ++i) {
-                    parameterTypes.add(javaParserWrapper.getExactType(resolvedConstructorDeclaration.getParam(i).getType()));
-                }
-                final ElementNames constructor = FullyQualifiedNameUtils.getConstructorName(createdType, parameterTypes);
-
-                graphBuilder.addConstructor(constructor);
-                graphBuilder.addHasConstructorRelationship(createdType, constructor);
-
-                final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(expr, context.typeDeclarations);
-                if (parentNamedCallable != null) {
-                    graphBuilder.addInvokeRelationship(parentNamedCallable, constructor);
-                    return;
-                }
-
-                if (javaParserWrapper.isInFieldDeclaration(expr) || javaParserWrapper.isInInitializer(expr)) {
-                    context.fieldInitializationStorageMap.get(containingType).addInvokedConstructor(constructor);
-                } else {
-                    throw new AssertionError("No parent method and no parent field declaration found for: " + expr);
-                }
-            } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring object creation expression '{}'. Message: {}", containingType.fullyQualified(), expr, e.getMessage());
-            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring object creation expression '{}'. Message: {}" + containingType.fullyQualified(), expr, e.getMessage());
-            } catch (RuntimeException e) {
-                rethrowIfNoResolveException(containingType, e);
+            final ITypeBinding typeBinding = node.resolveBinding();
+            if (typeBinding == null) {
+                LOG.debug("Binding failed in '{}'. Ignoring type declaration '{}'", context.currentFile, node);
+                return false;
             }
+
+            ElementNames declaredType;
+            if (typeBinding.isLocal()) {
+                declaredType = FullyQualifiedNameUtils.getLocalClassName(astUtils.getName(typeBinding.getDeclaringClass(), context.anonymousTypeDeclarations), context.anonymousTypeDeclarationsCounter, typeBinding.getName());
+                context.anonymousTypeDeclarationsCounter++;
+                context.anonymousTypeDeclarations.put(typeBinding, declaredType);
+            } else {
+                declaredType = astUtils.getName(typeBinding, context.anonymousTypeDeclarations);
+            }
+
+            context.fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
+            graphBuilder.addType(declaredType);
+
+            final ArrayList<Type> superTypes = new ArrayList<>(node.superInterfaceTypes());
+            if (node.getSuperclassType() != null) {
+                superTypes.add(node.getSuperclassType());
+            }
+
+            for (Type rawSuperType : superTypes) {
+                final ITypeBinding superTypeBinding = rawSuperType.resolveBinding();
+                if (superTypeBinding == null) {
+                    LOG.debug("Binding failed in '{}'. Ignoring super type '{}'", context.currentFile, node.getSuperclassType());
+                } else {
+                    final ElementNames superType = astUtils.getName(superTypeBinding, context.anonymousTypeDeclarations);
+                    graphBuilder.addType(superType);
+                    graphBuilder.addInheritsRelationship(declaredType, superType);
+                }
+            }
+
+            return true;
         }
 
         @Override
-        public void visit(FieldDeclaration n, JavaFileContext context) {
-            performVisit(n, context);
-            super.visit(n, context);
-        }
+        public void endVisit(TypeDeclaration node) {
+            Objects.requireNonNull(node);
 
-        private void performVisit(@Nonnull final FieldDeclaration n, @Nonnull final JavaFileContext context) {
-            Objects.requireNonNull(n);
-            Objects.requireNonNull(context);
-
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
-
-            if (n.getVariables().getFirst().isEmpty()) {
+            final ITypeBinding typeBinding = node.resolveBinding();
+            if (typeBinding == null) {
+                LOG.debug("Binding failed in '{}'. Ignoring type declaration '{}'", context.currentFile, node);
                 return;
             }
 
-            try {
-                final ElementNames fieldType = javaParserWrapper.getSimplifiedType(n.getVariables().getFirst().get().getType());
-                if (fieldType == null) {
-                    return;
-                }
-
-                graphBuilder.addType(fieldType);
-
-                for (VariableDeclarator variableDeclarator : n.getVariables()) {
-                    final ElementNames field = FullyQualifiedNameUtils.getFieldName(containingType, variableDeclarator.getNameAsString());
-                    graphBuilder.addField(field);
-                    graphBuilder.addHasFieldRelationship(containingType, field);
-                    graphBuilder.addOfTypeRelationship(field, fieldType);
-                }
-            } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring field declaration '{}'. Message: {}", containingType.fullyQualified(), n, e.getMessage());
-            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring field declaration '{}'. Message: {}", containingType.fullyQualified(), n, e.getMessage());
-            } catch (RuntimeException e) {
-                rethrowIfNoResolveException(containingType, e);
-            }
+            final ElementNames declaredType = astUtils.getName(typeBinding, context.anonymousTypeDeclarations);
+            addFieldInitializationCallsToTheConstructors(declaredType, context.fieldInitializationStorageMap.remove(declaredType));
         }
 
         // TODO add RecordDeclaration
 
-        @Override
-        public void visit(ClassOrInterfaceDeclaration n, JavaFileContext context) {
-            if (n.isLocalClassDeclaration()) {
-                // TODO Support local class declarations
-                return;
-            }
-
-            performVisit(n, context);
-
-            super.visit(n, context);
-
-            final ElementNames declaredType = context.typeDeclarations.get(n);
-            addFieldInitializationCallsToTheConstructors(declaredType, context.fieldInitializationStorageMap.remove(declaredType));
-        }
-
-        private void performVisit(@Nonnull final ClassOrInterfaceDeclaration n, @Nonnull final JavaFileContext context) {
-            Objects.requireNonNull(n);
-            Objects.requireNonNull(context);
-
-            final ElementNames declaredType = new ElementNames(n.getFullyQualifiedName().orElseThrow(), n.getNameAsString());
-            context.typeDeclarations.put(n, declaredType);
-            context.fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
-            graphBuilder.addType(declaredType);
-
-            for (ClassOrInterfaceType type : Iterables.concat(n.getExtendedTypes(), n.getImplementedTypes())) {
-                try {
-                    final ElementNames superType = javaParserWrapper.getSimplifiedType(type);
-                    if (superType == null) {
-                        return;
-                    }
-
-                    graphBuilder.addType(superType);
-                    graphBuilder.addInheritsRelationship(declaredType, superType);
-                } catch (UnsolvedSymbolException e) {
-                    LOG.debug("Symbol resolving failed in {}. Ignoring super type {}. Message: {}", declaredType.fullyQualified(), type.getNameAsString(), e.getMessage());
-                } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                    LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring super type {}. Message: {}", declaredType.fullyQualified(), type.getNameAsString(), e.getMessage());
-                } catch (RuntimeException e) {
-                    rethrowIfNoResolveException(declaredType, e);
-                }
-            }
-        }
 
         /**
          * Field initialization is done before the constructors are called. Add it to all existing constructors and
@@ -243,244 +187,320 @@ public class SourceCodeAnalyzer {
         }
 
         @Override
-        public void visit(EnumDeclaration n, JavaFileContext context) {
-            performVisit(n, context);
-            super.visit(n, context);
-        }
+        public boolean visit(EnumDeclaration node) {
+            Objects.requireNonNull(node);
 
-        private void performVisit(@Nonnull final EnumDeclaration n, @Nonnull final JavaFileContext context) {
-            Objects.requireNonNull(n);
-            Objects.requireNonNull(context);
+            final ITypeBinding typeBinding = node.resolveBinding();
+            if (typeBinding == null) {
+                LOG.debug("Binding failed in '{}'. Ignoring enum declaration '{}'", context.currentFile, node);
+                return true;
+            }
 
-            final ElementNames declaredType = new ElementNames(n.getFullyQualifiedName().orElseThrow(), n.getNameAsString());
-            context.typeDeclarations.put(n, declaredType);
+            final ElementNames declaredType = astUtils.getName(typeBinding, context.anonymousTypeDeclarations);
             context.fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
             graphBuilder.addType(declaredType);
+
+            return true;
         }
 
         @Override
-        public void visit(MethodCallExpr n, JavaFileContext context) {
-            performVisit(n, context);
-            super.visit(n, context);
-        }
+        public boolean visit(AnonymousClassDeclaration node) {
+            Objects.requireNonNull(node);
 
-        private void performVisit(@Nonnull final MethodCallExpr n, @Nonnull final JavaFileContext context) {
-            Objects.requireNonNull(n);
-            Objects.requireNonNull(context);
-
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
-
-            try {
-                final ResolvedMethodDeclaration resolvedMethodDeclaration = n.resolve();
-                final List<ElementNames> parameterTypes = new ArrayList<>(resolvedMethodDeclaration.getNumberOfParams());
-                for (int i = 0; i < resolvedMethodDeclaration.getNumberOfParams(); ++i) {
-                    parameterTypes.add(javaParserWrapper.getExactType(resolvedMethodDeclaration.getParam(i).getType()));
-                }
-                final ElementNames declaringType = new ElementNames(resolvedMethodDeclaration.declaringType().getQualifiedName(), resolvedMethodDeclaration.declaringType().getName());
-                final ElementNames method = FullyQualifiedNameUtils.getMethodName(declaringType, resolvedMethodDeclaration.getName(), parameterTypes);
-
-                graphBuilder.addType(declaringType);
-                graphBuilder.addMethod(method);
-                graphBuilder.addHasMethodRelationship(declaringType, method);
-
-                final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n, context.typeDeclarations);
-                if (parentNamedCallable != null) {
-                    graphBuilder.addInvokeRelationship(parentNamedCallable, method);
-                    return;
-                }
-
-                if (javaParserWrapper.isInFieldDeclaration(n) || javaParserWrapper.isInInitializer(n)) {
-                    context.fieldInitializationStorageMap.get(containingType).addInvokedMethod(method);
-                } else {
-                    throw new AssertionError("No parent method and no parent field declaration found for " + n);
-                }
-            } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring method call expression '{}'. Message: {}", containingType.fullyQualified(), n, e.getMessage());
-            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring method call expression '{}'. Message: {}", containingType.fullyQualified(), n, e.getMessage());
-            } catch (MethodAmbiguityException e) { // Don't know why the UnsupportedOperationException is thrown.
-                LOG.debug("MethodAmbiguityException occurred during processing {}. Ignoring method call expression '{}'. Message: {}", containingType.fullyQualified(), n, e.getMessage());
-            } catch (RuntimeException e) {
-                rethrowIfNoResolveException(containingType, e);
+            final ITypeBinding typeBinding = node.resolveBinding();
+            if (typeBinding == null) {
+                LOG.debug("Binding failed in '{}'. Ignoring anonymous type declaration '{}'", context.currentFile, node);
+                return true;
             }
-        }
 
-        @Override
-        public void visit(FieldAccessExpr n, JavaFileContext context) {
-            performVisit(n, context);
-            super.visit(n, context);
-        }
+            // Manually create the name of the anonymous class as the binary name of the anonymous class is not always available.
+            final ElementNames declaredType = FullyQualifiedNameUtils.getAnonymousClassName(astUtils.getName(typeBinding.getDeclaringClass(), context.anonymousTypeDeclarations), context.anonymousTypeDeclarationsCounter);
+            context.anonymousTypeDeclarationsCounter++;
+            context.anonymousTypeDeclarations.put(typeBinding, declaredType);
+            context.fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
+            graphBuilder.addType(declaredType);
 
-        private void performVisit(@Nonnull final FieldAccessExpr n, @Nonnull final JavaFileContext context) {
-            Objects.requireNonNull(n);
-            Objects.requireNonNull(context);
-
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
-
-            try {
-                final ResolvedValueDeclaration valueDeclaration = n.resolve();
-                if (valueDeclaration instanceof ResolvedFieldDeclaration resolvedFieldDeclaration) {
-                    // Type that contains the accessed field
-                    final ElementNames typeThatContainsTheField = new ElementNames(resolvedFieldDeclaration.declaringType().asReferenceType().getQualifiedName(), resolvedFieldDeclaration.declaringType().asReferenceType().getName());
-                    graphBuilder.addType(typeThatContainsTheField);
-
-                    // The accessed field
-                    final ElementNames field = FullyQualifiedNameUtils.getFieldName(typeThatContainsTheField, resolvedFieldDeclaration.getName());
-                    graphBuilder.addField(field);
-                    graphBuilder.addHasFieldRelationship(typeThatContainsTheField, field);
-
-                    // Type of the accessed field
-                    final ElementNames typeOfField = javaParserWrapper.getSimplifiedType(resolvedFieldDeclaration.getType());
-                    graphBuilder.addType(typeOfField);
-                    graphBuilder.addOfTypeRelationship(field, typeOfField);
-
-                    // The actual access field relationship
-                    final ElementNames parentNamedCallable = javaParserWrapper.getParentNamedCallable(n, context.typeDeclarations);
-                    if (parentNamedCallable != null) {
-                        graphBuilder.addAccessRelationship(parentNamedCallable, field);
-                        return;
-                    }
-
-                    if (javaParserWrapper.isInFieldDeclaration(n) || javaParserWrapper.isInInitializer(n)) {
-                        context.fieldInitializationStorageMap.get(javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations)).addAccessedField(field);
-                    } else {
-                        throw new AssertionError("No parent method and no parent field declaration found for: " + n);
-                    }
-                }
-            } catch (UnsolvedSymbolException e) {
-                Optional<Node> parentNode = n.getParentNode();
-                while (parentNode.isPresent() && parentNode.get() instanceof FieldAccessExpr parentFieldAccessExpr) {
-                    try {
-                        if (parentFieldAccessExpr.resolve() instanceof JavaParserEnumConstantDeclaration) {
-                            // This is a known issue, see: https://github.com/javaparser/javaparser/issues/2442
-                            // The enum type itself is also treated as FieldAccessExpr and for it resolving fails.
-                            // e.g. MyClass.MyInnerEnum.EnumValue -> MyClass.MyInnerEnum is treated as FieldAccessExpr and for it resolving fails.
-                            return;
-                        }
-                    } catch (RuntimeException ignored) {
-                        // This is just a known issue detection. Ignore and continue with the original error.
-                    }
-                    parentNode = parentNode.get().getParentNode();
-                }
-
-                LOG.debug("Symbol resolving failed in {}. Ignoring field access expression '{}'. Message: {}", containingType.fullyQualified(), n, e.getMessage());
-            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring field access expression '{}'. Message: {}", containingType.fullyQualified(), n, e.getMessage());
-            } catch (RuntimeException e) {
-                rethrowIfNoResolveException(containingType, e);
+            final ITypeBinding superTypeBinding = ((ClassInstanceCreation) node.getParent()).getType().resolveBinding();
+            if (superTypeBinding == null) {
+                LOG.debug("Binding failed in '{}'. Ignoring super class of anonymous type declaration '{}'", context.currentFile, node);
+            } else {
+                final ElementNames superType = astUtils.getName(superTypeBinding, context.anonymousTypeDeclarations);
+                graphBuilder.addType(superType);
+                graphBuilder.addInheritsRelationship(declaredType, superType);
             }
+
+            return true;
         }
 
         @Override
-        public void visit(ConstructorDeclaration n, JavaFileContext context) {
-            performVisit(n, context);
-            super.visit(n, context);
+        public void endVisit(AnonymousClassDeclaration node) {
+            Objects.requireNonNull(node);
+
+            final ITypeBinding typeBinding = node.resolveBinding();
+            if (typeBinding == null) {
+                LOG.debug("Binding failed in '{}'. Ignoring anonymous type declaration '{}'", context.currentFile, node);
+                return;
+            }
+
+            final ElementNames declaredType = astUtils.getName(typeBinding, context.anonymousTypeDeclarations);
+            addFieldInitializationCallsToTheConstructors(declaredType, context.fieldInitializationStorageMap.remove(declaredType));
         }
 
-        private void performVisit(@Nonnull final ConstructorDeclaration n, @Nonnull final JavaFileContext context) {
-            Objects.requireNonNull(n);
-            Objects.requireNonNull(context);
+        @Override
+        public boolean visit(MethodDeclaration node) {
+            Objects.requireNonNull(node);
 
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
+            final IMethodBinding methodBinding = node.resolveBinding();
+            if (methodBinding == null) {
+                LOG.debug("Binding failed in '{}'. Ignoring method/constructor declaration '{}'", context.currentFile, node);
+                return true;
+            }
 
-            try {
-                final List<ElementNames> parameterTypes = javaParserWrapper.getParameterTypes(n.getParameters());
+            final ElementNames containingType = astUtils.getName(methodBinding.getDeclaringClass(), context.anonymousTypeDeclarations);
+            final List<ElementNames> parameterTypes = Arrays.stream(methodBinding.getParameterTypes()).map(typeBinding -> astUtils.getExactType(typeBinding, context.anonymousTypeDeclarations)).collect(Collectors.toList());
+
+            if (node.isConstructor()) {
                 final ElementNames constructor = FullyQualifiedNameUtils.getConstructorName(containingType, parameterTypes);
                 graphBuilder.addConstructor(constructor);
                 graphBuilder.addHasConstructorRelationship(containingType, constructor);
                 context.fieldInitializationStorageMap.get(containingType).addConstructor(constructor);
-            } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring constructor declaration '{}'. Message: {}", containingType.fullyQualified(), n.getDeclarationAsString(false, false, false), e.getMessage());
-            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring constructor declaration '{}'. Message: {}", containingType.fullyQualified(), n.getDeclarationAsString(false, false, false), e.getMessage());
-            } catch (RuntimeException e) {
-                rethrowIfNoResolveException(containingType, e);
-            }
-        }
-
-        @Override
-        public void visit(MethodDeclaration n, JavaFileContext context) {
-            performVisit(n, context);
-
-            super.visit(n, context);
-        }
-
-        private void performVisit(@Nonnull final MethodDeclaration n, @Nonnull final JavaFileContext context) {
-            Objects.requireNonNull(n);
-            Objects.requireNonNull(context);
-
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
-
-            try {
-                final List<ElementNames> parameterTypes = javaParserWrapper.getParameterTypes(n.getParameters());
-                final ElementNames method = FullyQualifiedNameUtils.getMethodName(containingType, n.getNameAsString(), parameterTypes);
+            } else {
+                final ElementNames method = FullyQualifiedNameUtils.getMethodName(containingType, methodBinding.getName(), parameterTypes);
                 graphBuilder.addMethod(method);
                 graphBuilder.addHasMethodRelationship(containingType, method);
-            } catch (UnsolvedSymbolException e) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring method declaration '{}'. Message: {}", containingType.fullyQualified(), n.getDeclarationAsString(false, false, false), e.getMessage());
-            } catch (UnsupportedOperationException e) { // Don't know why the UnsupportedOperationException is thrown.
-                LOG.debug("UnsupportedOperationException occurred during processing {}. Ignoring method declaration '{}'. Message: {}", containingType.fullyQualified(), n.getDeclarationAsString(false, false, false), e.getMessage());
-            } catch (RuntimeException e) {
-                rethrowIfNoResolveException(containingType, e);
+            }
+
+            return true;
+        }
+
+
+        @Override
+        public boolean visit(FieldDeclaration node) {
+            Objects.requireNonNull(node);
+
+            for (VariableDeclarationFragment variableDeclarationFragment : (List<VariableDeclarationFragment>) node.fragments()) {
+                final IVariableBinding variableBinding = variableDeclarationFragment.resolveBinding();
+
+                if (variableBinding == null) {
+                    LOG.debug("Binding failed in '{}'. Ignoring field declaration '{}'", context.currentFile, node);
+                    continue;
+                }
+
+                final ElementNames containingType = astUtils.getName(variableBinding.getDeclaringClass(), context.anonymousTypeDeclarations);
+
+                final ElementNames field = FullyQualifiedNameUtils.getFieldName(containingType, variableBinding.getName());
+                graphBuilder.addField(field);
+                graphBuilder.addHasFieldRelationship(containingType, field);
+
+                if (variableBinding.getType().isTypeVariable() || variableBinding.getType().isCapture()) {
+                    // TODO add support for type variables
+                    LOG.debug("Ignoring field declaration in '{}' due to the type variable '{}'", context.currentFile, node);
+                } else {
+                    final ElementNames fieldType = astUtils.getSimplifiedType(variableBinding.getType(), context.anonymousTypeDeclarations);
+                    graphBuilder.addType(fieldType);
+                    graphBuilder.addOfTypeRelationship(field, fieldType);
+                }
+            }
+
+            return true;
+        }
+
+        @Override
+        public void endVisit(ClassInstanceCreation node) {
+            Objects.requireNonNull(node);
+
+            final IMethodBinding methodBinding = node.resolveConstructorBinding();
+            if (methodBinding == null) {
+                LOG.debug("Binding failed in '{}'. Ignoring class instance creation '{}'", context.currentFile, node);
+                return;
+            }
+            final IMethodBinding methodDeclaration = methodBinding.getMethodDeclaration();
+
+            ElementNames declaringType = astUtils.getName(methodDeclaration.getDeclaringClass(), context.anonymousTypeDeclarations);
+            graphBuilder.addType(declaringType);
+
+            final ElementNames constructor = astUtils.getMethodBindingName(methodDeclaration, context.anonymousTypeDeclarations);
+
+            graphBuilder.addConstructor(constructor);
+            graphBuilder.addHasConstructorRelationship(declaringType, constructor);
+
+            final ASTNode enclosingNode = astUtils.getEnclosingNode(node);
+            if (enclosingNode instanceof MethodDeclaration invokingMethodDeclaration) {
+                final IMethodBinding invokingMethodBinding = invokingMethodDeclaration.resolveBinding();
+                if (invokingMethodBinding == null) {
+                    LOG.debug("Binding failed in '{}'. Ignoring class instance creation invocation '{}'", context.currentFile, node);
+                } else {
+                    graphBuilder.addInvokeRelationship(astUtils.getMethodBindingName(invokingMethodBinding, context.anonymousTypeDeclarations), constructor);
+                }
+            } else if (enclosingNode instanceof FieldDeclaration || enclosingNode instanceof Initializer) {
+                context.fieldInitializationStorageMap.get(astUtils.getParentTypeDeclaration(node, context.anonymousTypeDeclarations)).addInvokedConstructor(constructor);
+            } else {
+                throw new AssertionError("Unknown enclosing method type '" + enclosingNode.getClass() + "' for create instance expression '" + node + "'");
             }
         }
 
         @Override
-        public void visit(InitializerDeclaration n, JavaFileContext context) {
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
+        public void endVisit(MethodInvocation node) {
+            Objects.requireNonNull(node);
 
-            if (n.isStatic()) {
-                LOG.trace("Ignoring static initializer of {} as it is not supported.", containingType.fullyQualified());
+            final IMethodBinding methodBinding = node.resolveMethodBinding();
+            if (methodBinding == null) {
+                LOG.debug("Binding failed in '{}'. Ignoring method invocation '{}'", context.currentFile, node);
+                return;
+            }
+            final IMethodBinding methodDeclaration = methodBinding.getMethodDeclaration();
+
+            final ElementNames declaringType = astUtils.getName(methodDeclaration.getDeclaringClass(), context.anonymousTypeDeclarations);
+            graphBuilder.addType(declaringType);
+
+            final ElementNames method = astUtils.getMethodBindingName(methodDeclaration, context.anonymousTypeDeclarations);
+
+            graphBuilder.addType(declaringType);
+            graphBuilder.addMethod(method);
+            graphBuilder.addHasMethodRelationship(declaringType, method);
+
+            final ASTNode enclosingNode = astUtils.getEnclosingNode(node);
+            if (enclosingNode instanceof MethodDeclaration invokingMethodDeclaration) {
+                final IMethodBinding invokingMethodBinding = invokingMethodDeclaration.resolveBinding();
+                if (invokingMethodBinding == null) {
+                    LOG.debug("Binding failed in '{}'. Ignoring method invocation '{}'", context.currentFile, node);
+                } else {
+                    graphBuilder.addInvokeRelationship(astUtils.getMethodBindingName(invokingMethodBinding, context.anonymousTypeDeclarations), method);
+                }
+            } else if (enclosingNode instanceof FieldDeclaration || enclosingNode instanceof Initializer) {
+                context.fieldInitializationStorageMap.get(astUtils.getParentTypeDeclaration(node, context.anonymousTypeDeclarations)).addInvokedMethod(method);
+            } else {
+                throw new AssertionError("Unknown enclosing method type '" + enclosingNode.getClass() + "' for method invocation expression '" + node + "'");
+            }
+        }
+
+        @Override
+        public void endVisit(FieldAccess node) {
+            Objects.requireNonNull(node);
+
+            final IVariableBinding variableBinding = node.resolveFieldBinding();
+            if (variableBinding == null) {
+                LOG.debug("Binding failed in '{}'. Ignoring field access '{}'", context.currentFile, node);
                 return;
             }
 
-            super.visit(n, context);
+            handleFieldAccess(node, variableBinding);
         }
+
 
         @Override
-        public void visit(EnumConstantDeclaration n, JavaFileContext context) {
-            final ElementNames containingType = javaParserWrapper.getParentTypeDeclaration(n, context.typeDeclarations);
+        public void endVisit(QualifiedName node) {
+            Objects.requireNonNull(node);
 
-            LOG.trace("Ignoring enum constant declaration of {} as it is not supported.", containingType.fullyQualified());
-        }
-
-        @Override
-        public void visit(AnnotationDeclaration n, JavaFileContext arg) {
-            LOG.trace("Ignoring annotation declaration of {} as it is not supported.", n.getName());
-        }
-
-        @Override
-        public void visit(NormalAnnotationExpr n, JavaFileContext arg) {
-            LOG.trace("Ignoring annotation expression of {} as it is not supported.", n.getName());
-        }
-
-        @Override
-        public void visit(SingleMemberAnnotationExpr n, JavaFileContext arg) {
-            LOG.trace("Ignoring annotation expression of {} as it is not supported.", n.getName());
-        }
-
-        private void rethrowIfNoResolveException(@Nonnull final ElementNames containingType,
-                                                 @Nonnull final RuntimeException e) {
-            Objects.requireNonNull(containingType);
-            Objects.requireNonNull(e);
-
-            if (e.getMessage().contains("Unable to calculate the type of a parameter of a method call.")) {
-                LOG.debug("Symbol resolving failed in {}. Ignoring it.", containingType.fullyQualified());
+            final IBinding binding = node.resolveBinding();
+            if (binding == null) {
+                LOG.debug("Binding failed in '{}'. Ignoring qualified name '{}'", context.currentFile, node);
                 return;
             }
 
-            throw e;
+            if (binding instanceof IVariableBinding variableBinding) {
+                handleFieldAccess(node, variableBinding);
+            }
         }
-    }
 
-    private static class JavaFileContext {
-        /**
-         * The declared type's name of a type declaring nodes in the AST.
-         */
-        @Nonnull
-        public final HashMap<Node, ElementNames> typeDeclarations = new HashMap<>();
-        public int anonymousTypeDeclarationsCounter = 0;
-        @Nonnull
-        public final HashMap<ElementNames, FieldInitializationStorage> fieldInitializationStorageMap = new HashMap<>();
+        public void handleFieldAccess(@Nonnull final ASTNode node, @Nonnull final IVariableBinding variableBinding) {
+            Objects.requireNonNull(node);
+            Objects.requireNonNull(variableBinding);
+
+            if (variableBinding.isEnumConstant()) {
+                // TODO add support for enum constant access
+                return;
+            }
+
+            if (variableBinding.getName().equals("length") && variableBinding.getDeclaringClass() == null) {
+                // The length field of an array is the declaring class not set. Ignore it.
+                return;
+            }
+
+            // Type that contains the accessed field
+            final ElementNames typeThatContainsTheField = astUtils.getName(variableBinding.getDeclaringClass(), context.anonymousTypeDeclarations);
+            graphBuilder.addType(typeThatContainsTheField);
+
+            // The accessed field
+            final ElementNames field = FullyQualifiedNameUtils.getFieldName(typeThatContainsTheField, variableBinding.getName());
+            graphBuilder.addField(field);
+            graphBuilder.addHasFieldRelationship(typeThatContainsTheField, field);
+
+            // Type of the accessed field
+            if (variableBinding.getType().isTypeVariable() || variableBinding.getType().isCapture()) {
+                // TODO add support for type variables
+                LOG.debug("Ignoring type of field access in '{}' due to the type variable '{}'", context.currentFile, node);
+            } else {
+                final ElementNames typeOfField = astUtils.getSimplifiedType(variableBinding.getType(), context.anonymousTypeDeclarations);
+                graphBuilder.addType(typeOfField);
+                graphBuilder.addOfTypeRelationship(field, typeOfField);
+            }
+            // The actual access field relationship
+            final ASTNode enclosingNode = astUtils.getEnclosingNode(node);
+            if (enclosingNode instanceof MethodDeclaration invokingMethodDeclaration) {
+                final IMethodBinding invokingMethodBinding = invokingMethodDeclaration.resolveBinding();
+                if (invokingMethodBinding == null) {
+                    LOG.debug("Binding failed in '{}'. Ignoring field access '{}'", context.currentFile, node);
+                } else {
+                    graphBuilder.addAccessRelationship(astUtils.getMethodBindingName(invokingMethodBinding, context.anonymousTypeDeclarations), field);
+                }
+            } else if (enclosingNode instanceof FieldDeclaration || enclosingNode instanceof Initializer) {
+                context.fieldInitializationStorageMap.get(astUtils.getParentTypeDeclaration(node, context.anonymousTypeDeclarations)).addAccessedField(field);
+            } else {
+                throw new AssertionError("Unknown enclosing method type '" + enclosingNode.getClass() + "' for field access expression '" + node + "'");
+            }
+        }
+
+        @Override
+        public boolean visit(ImportDeclaration node) {
+            // We are not interested in ImportDeclarations
+            return false;
+        }
+
+        @Override
+        public boolean visit(AnnotationTypeDeclaration node) {
+            // We are not interested in AnnotationTypeDeclarations
+            return false;
+        }
+
+        @Override
+        public boolean visit(EnumConstantDeclaration node) {
+            // TODO add support for enum constants
+            return false;
+        }
+
+        @Override
+        public boolean visit(MarkerAnnotation node) {
+            return false;
+        }
+
+        @Override
+        public boolean visit(NormalAnnotation node) {
+            return false;
+        }
+
+        @Override
+        public boolean visit(SingleMemberAnnotation node) {
+            return false;
+        }
+
+        private static class JavaFileContext {
+            @Nonnull
+            public final String currentFile;
+
+            /**
+             * The generated names of anonymous classes.
+             */
+            @Nonnull
+            public final HashMap<ITypeBinding, ElementNames> anonymousTypeDeclarations = new HashMap<>();
+            public int anonymousTypeDeclarationsCounter = 1;
+
+            @Nonnull
+            public final HashMap<ElementNames, FieldInitializationStorage> fieldInitializationStorageMap = new HashMap<>();
+
+            public JavaFileContext(@Nonnull String currentFile) {
+                this.currentFile = currentFile;
+            }
+        }
     }
 }

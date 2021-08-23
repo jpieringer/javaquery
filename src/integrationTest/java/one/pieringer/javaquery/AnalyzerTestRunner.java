@@ -1,5 +1,6 @@
 package one.pieringer.javaquery;
 
+import one.pieringer.javaquery.analyzer.ASTUtils;
 import one.pieringer.javaquery.analyzer.Analyzer;
 import one.pieringer.javaquery.analyzer.SourceCodeAnalyzerFactory;
 import one.pieringer.javaquery.database.GraphPersistence;
@@ -27,7 +28,7 @@ public class AnalyzerTestRunner {
     @Nonnull
     public static Set<Object> analyzeClassesOfTest(@Nonnull final Class<?> testClass) throws URISyntaxException {
         final URL testSourceDirectoryUrl = Objects.requireNonNull(testClass.getResource(testClass.getSimpleName()));
-        final Analyzer analyzer = new Analyzer(new SourceCodeAnalyzerFactory());
+        final Analyzer analyzer = new Analyzer(new SourceCodeAnalyzerFactory(new ASTUtils()));
         final GraphPersistence graphPersistenceMock = mock(GraphPersistence.class);
         //noinspection unchecked
         final ArgumentCaptor<Set<Object>> actualElementsCaptor = ArgumentCaptor.forClass(Set.class);

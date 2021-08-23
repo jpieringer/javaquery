@@ -12,9 +12,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class InvokeConstructorWithAnonymousClassTest {
     @Test
     void verifyInvokeConstructorIsDetected() throws URISyntaxException {
-        final Type anonymousClass = new Type("pkg.TypeWithNewInstance$0Runnable", "TypeWithNewInstance$0Runnable");
-        final Constructor anonymousClassConstructor = new Constructor("pkg.TypeWithNewInstance$0Runnable.<init>()", "<init>()");
-        final Method anonymousClassMethod = new Method("pkg.TypeWithNewInstance$0Runnable.run()", "run()");
+        final Type anonymousClass = new Type("pkg.TypeWithNewInstance$1", "TypeWithNewInstance$1");
+        final Constructor anonymousClassConstructor = new Constructor("pkg.TypeWithNewInstance$1.<init>()", "<init>()");
+        final Method anonymousClassMethod = new Method("pkg.TypeWithNewInstance$1.run()", "run()");
         final Type runnable = new Type("java.lang.Runnable", "Runnable");
 
 
