@@ -37,7 +37,7 @@ dependencies {
     implementation("org.neo4j:neo4j-ogm-bolt-driver:3.2.16")
     implementation("org.neo4j:neo4j-ogm-bolt-native-types:3.2.16")
     // PlantUml
-    implementation(files("libs/plantuml-1.2020.14.jar"))
+    implementation(files("libs/plantuml-1.2021.9.jar"))
     // PDF Export
     implementation("org.apache.xmlgraphics:batik:1.13")
     implementation("org.apache.xmlgraphics:fop-transcoder:2.5")
