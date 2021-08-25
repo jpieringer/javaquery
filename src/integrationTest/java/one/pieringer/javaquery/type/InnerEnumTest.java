@@ -14,8 +14,8 @@ public class InnerEnumTest {
     @Test
     void verifyTypeIsDetected() throws URISyntaxException {
         final Set<Object> expectedElements = Set.of(
-                new Type("pkg.SingleType", "SingleType"),
-                new Type("pkg.SingleType.InnerEnumType", "InnerEnumType")
+                Type.createClass("pkg.SingleType", "SingleType"),
+                Type.createEnum("pkg.SingleType.InnerEnumType", "InnerEnumType")
         );
 
         final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(InnerEnumTest.class);

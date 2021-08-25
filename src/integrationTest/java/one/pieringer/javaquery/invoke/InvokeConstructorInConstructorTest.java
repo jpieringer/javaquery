@@ -15,11 +15,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class InvokeConstructorInConstructorTest {
     @Test
     void verifyInvokeConstructorIsDetected() throws URISyntaxException {
-        final Type typeOfNewInstance = new Type("pkg.TypeOfNewInstance", "TypeOfNewInstance");
+        final Type typeOfNewInstance = Type.createClass("pkg.TypeOfNewInstance", "TypeOfNewInstance");
         final Constructor typeOfNewInstanceConstructor = new Constructor("pkg.TypeOfNewInstance.<init>()", "<init>()");
         final HasConstructorRelationship typeOfNewInstanceHasConstructorRelationship = new HasConstructorRelationship(typeOfNewInstance, typeOfNewInstanceConstructor);
 
-        final Type typeWithNewInstance = new Type("pkg.TypeWithNewInstance", "TypeWithNewInstance");
+        final Type typeWithNewInstance = Type.createClass("pkg.TypeWithNewInstance", "TypeWithNewInstance");
         final Constructor typeWithNewInstanceConstructor = new Constructor("pkg.TypeWithNewInstance.<init>()", "<init>()");
         final HasConstructorRelationship typeWithNewInstanceHasConstructorRelationship = new HasConstructorRelationship(typeWithNewInstance, typeWithNewInstanceConstructor);
 

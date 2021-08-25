@@ -12,11 +12,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class FieldInitializationWithExistingConstructorTest {
     @Test
     void verifyFieldInitializationIsDetected() throws URISyntaxException {
-        final Type typeWithField = new Type("pkg.TypeWithField", "TypeWithField");
+        final Type typeWithField = Type.createClass("pkg.TypeWithField", "TypeWithField");
         final Field field = new Field("pkg.TypeWithField.field", "field");
         final Constructor typeWithFieldConstructor = new Constructor("pkg.TypeWithField.<init>(int)", "<init>(int)");
 
-        final Type bigIntegerType = new Type("java.math.BigInteger", "BigInteger");
+        final Type bigIntegerType = Type.createClass("java.math.BigInteger", "BigInteger");
         final Method bigIntegerMethod = new Method("java.math.BigInteger.valueOf(long)", "valueOf(long)");
 
         final Set<Object> expectedElements = Set.of(

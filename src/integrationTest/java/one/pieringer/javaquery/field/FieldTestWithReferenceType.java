@@ -15,8 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class FieldTestWithReferenceType {
     @Test
     void verifyFieldIsDetected() throws URISyntaxException {
-        final Type typeWithField = new Type("pkg.TypeWithField", "TypeWithField");
-        final Type typeOfField = new Type("pkg.TypeOfField", "TypeOfField");
+        final Type typeWithField = Type.createClass("pkg.TypeWithField", "TypeWithField");
+        final Type typeOfField = Type.createClass("pkg.TypeOfField", "TypeOfField");
         final Field field = new Field("pkg.TypeWithField.field", "field");
         final HasFieldRelationship hasFieldRelationship = new HasFieldRelationship(typeWithField, field);
         final OfTypeRelationship ofTypeRelationship = new OfTypeRelationship(field, typeOfField);

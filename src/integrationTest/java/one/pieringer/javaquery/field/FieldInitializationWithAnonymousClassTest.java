@@ -12,12 +12,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class FieldInitializationWithAnonymousClassTest {
     @Test
     void verifyFieldInitializationIsDetected() throws URISyntaxException {
-        final Type anonymousClass = new Type("pkg.TypeWithNewInstance$1", "TypeWithNewInstance$1");
+        final Type anonymousClass = Type.createClass("pkg.TypeWithNewInstance$1", "TypeWithNewInstance$1");
         final Constructor anonymousClassConstructor = new Constructor("pkg.TypeWithNewInstance$1.<init>()", "<init>()");
         final Method anonymousClassMethod = new Method("pkg.TypeWithNewInstance$1.run()", "run()");
-        final Type runnable = new Type("java.lang.Runnable", "Runnable");
+        final Type runnable = Type.createInterface("java.lang.Runnable", "Runnable");
 
-        final Type typeWithNewInstance = new Type("pkg.TypeWithNewInstance", "TypeWithNewInstance");
+        final Type typeWithNewInstance = Type.createClass("pkg.TypeWithNewInstance", "TypeWithNewInstance");
         final Field field = new Field("pkg.TypeWithNewInstance.field", "field");
         final Constructor constructor = new Constructor("pkg.TypeWithNewInstance.<init>()", "<init>()");
 

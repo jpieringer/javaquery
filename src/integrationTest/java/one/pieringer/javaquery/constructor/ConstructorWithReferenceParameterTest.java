@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ConstructorWithReferenceParameterTest {
     @Test
     void verifyConstructorIsDetected() throws URISyntaxException {
-        final Type type = new Type("pkg.TypeWithConstructor", "TypeWithConstructor");
+        final Type type = Type.createClass("pkg.TypeWithConstructor", "TypeWithConstructor");
         final Constructor constructor = new Constructor("pkg.TypeWithConstructor.<init>(java.lang.String)", "<init>(String)");
         final HasConstructorRelationship hasConstructorRelationship = new HasConstructorRelationship(type, constructor);
         final Set<Object> expectedElements = Set.of(type, constructor, hasConstructorRelationship);

@@ -12,14 +12,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class FieldInitializationWithFieldAccessTest {
     @Test
     void verifyFieldInitializationIsDetected() throws URISyntaxException {
-        final Type typeWithField = new Type("pkg.TypeWithField", "TypeWithField");
+        final Type typeWithField = Type.createClass("pkg.TypeWithField", "TypeWithField");
         final Field field = new Field("pkg.TypeWithField.field", "field");
         final Constructor typeWithFieldConstructor = new Constructor("pkg.TypeWithField.<init>()", "<init>()");
 
-        final Type integerType = new Type("java.lang.Integer", "Integer");
+        final Type integerType = Type.createClass("java.lang.Integer", "Integer");
         final Field integerField = new Field("java.lang.Integer.MAX_VALUE", "MAX_VALUE");
 
-        final Type intType = new Type("int", "int");
+        final Type intType = Type.createPrimitive("int", "int");
 
         final Set<Object> expectedElements = Set.of(
                 typeWithField,

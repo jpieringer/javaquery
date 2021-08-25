@@ -14,10 +14,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class AccessInnerEnumTest {
     @Test
     void verifyEnumFieldAccessIsDetected() throws URISyntaxException {
-        final Type outerClass = new Type("pkg.OuterClass", "OuterClass");
-        final Type innerEnumType = new Type("pkg.OuterClass.InnerEnumType", "InnerEnumType");
+        final Type outerClass = Type.createClass("pkg.OuterClass", "OuterClass");
+        final Type innerEnumType = Type.createEnum("pkg.OuterClass.InnerEnumType", "InnerEnumType");
 
-        final Type typeThatAccessesInnerEnum = new Type("pkg.TypeThatAccessesInnerEnum", "TypeThatAccessesInnerEnum");
+        final Type typeThatAccessesInnerEnum = Type.createClass("pkg.TypeThatAccessesInnerEnum", "TypeThatAccessesInnerEnum");
         final Method method = new Method("pkg.TypeThatAccessesInnerEnum.method()", "method()");
         final HasMethodRelationship hasMethodRelationship = new HasMethodRelationship(typeThatAccessesInnerEnum, method);
 

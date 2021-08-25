@@ -14,7 +14,7 @@ public class EnumTest {
     @Test
     void verifyTypeIsDetected() throws URISyntaxException {
         final Set<Object> expectedElements = Set.of(
-                new Type("pkg.EnumType", "EnumType")
+                Type.createEnum("pkg.EnumType", "EnumType")
         );
 
         final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(EnumTest.class);

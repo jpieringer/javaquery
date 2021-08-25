@@ -12,6 +12,7 @@ import org.eclipse.jdt.core.dom.*;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
@@ -114,7 +115,7 @@ public class SourceCodeAnalyzer {
             }
 
             context.fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
-            graphBuilder.addType(declaredType);
+            addType(declaredType, typeBinding);
 
             final ArrayList<Type> superTypes = new ArrayList<>(node.superInterfaceTypes());
             if (node.getSuperclassType() != null) {
@@ -127,7 +128,7 @@ public class SourceCodeAnalyzer {
                     LOG.debug("Binding failed in '{}'. Ignoring super type '{}'", context.currentFile, node.getSuperclassType());
                 } else {
                     final ElementNames superType = astUtils.getName(superTypeBinding, context.anonymousTypeDeclarations);
-                    graphBuilder.addType(superType);
+                    addType(superType, superTypeBinding);
                     graphBuilder.addInheritsRelationship(declaredType, superType);
                 }
             }
@@ -198,7 +199,7 @@ public class SourceCodeAnalyzer {
 
             final ElementNames declaredType = astUtils.getName(typeBinding, context.anonymousTypeDeclarations);
             context.fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
-            graphBuilder.addType(declaredType);
+            addType(declaredType, typeBinding);
 
             return true;
         }
@@ -218,14 +219,14 @@ public class SourceCodeAnalyzer {
             context.anonymousTypeDeclarationsCounter++;
             context.anonymousTypeDeclarations.put(typeBinding, declaredType);
             context.fieldInitializationStorageMap.put(declaredType, new FieldInitializationStorage());
-            graphBuilder.addType(declaredType);
+            addType(declaredType, typeBinding);
 
             final ITypeBinding superTypeBinding = ((ClassInstanceCreation) node.getParent()).getType().resolveBinding();
             if (superTypeBinding == null) {
                 LOG.debug("Binding failed in '{}'. Ignoring super class of anonymous type declaration '{}'", context.currentFile, node);
             } else {
                 final ElementNames superType = astUtils.getName(superTypeBinding, context.anonymousTypeDeclarations);
-                graphBuilder.addType(superType);
+                addType(superType, superTypeBinding);
                 graphBuilder.addInheritsRelationship(declaredType, superType);
             }
 
@@ -296,8 +297,9 @@ public class SourceCodeAnalyzer {
                     // TODO add support for type variables
                     LOG.debug("Ignoring field declaration in '{}' due to the type variable '{}'", context.currentFile, node);
                 } else {
-                    final ElementNames fieldType = astUtils.getSimplifiedType(variableBinding.getType(), context.anonymousTypeDeclarations);
-                    graphBuilder.addType(fieldType);
+                    final ITypeBinding fieldTypeBinding = astUtils.getSimplifiedTypeBinding(variableBinding.getType());
+                    final ElementNames fieldType = astUtils.getName(fieldTypeBinding, context.anonymousTypeDeclarations);
+                    addType(fieldType, fieldTypeBinding);
                     graphBuilder.addOfTypeRelationship(field, fieldType);
                 }
             }
@@ -317,7 +319,7 @@ public class SourceCodeAnalyzer {
             final IMethodBinding methodDeclaration = methodBinding.getMethodDeclaration();
 
             ElementNames declaringType = astUtils.getName(methodDeclaration.getDeclaringClass(), context.anonymousTypeDeclarations);
-            graphBuilder.addType(declaringType);
+            addType(declaringType, methodDeclaration.getDeclaringClass());
 
             final ElementNames constructor = astUtils.getMethodBindingName(methodDeclaration, context.anonymousTypeDeclarations);
 
@@ -351,11 +353,9 @@ public class SourceCodeAnalyzer {
             final IMethodBinding methodDeclaration = methodBinding.getMethodDeclaration();
 
             final ElementNames declaringType = astUtils.getName(methodDeclaration.getDeclaringClass(), context.anonymousTypeDeclarations);
-            graphBuilder.addType(declaringType);
+            addType(declaringType, methodDeclaration.getDeclaringClass());
 
             final ElementNames method = astUtils.getMethodBindingName(methodDeclaration, context.anonymousTypeDeclarations);
-
-            graphBuilder.addType(declaringType);
             graphBuilder.addMethod(method);
             graphBuilder.addHasMethodRelationship(declaringType, method);
 
@@ -419,7 +419,7 @@ public class SourceCodeAnalyzer {
 
             // Type that contains the accessed field
             final ElementNames typeThatContainsTheField = astUtils.getName(variableBinding.getDeclaringClass(), context.anonymousTypeDeclarations);
-            graphBuilder.addType(typeThatContainsTheField);
+            addType(typeThatContainsTheField, variableBinding.getDeclaringClass());
 
             // The accessed field
             final ElementNames field = FullyQualifiedNameUtils.getFieldName(typeThatContainsTheField, variableBinding.getName());
@@ -431,9 +431,10 @@ public class SourceCodeAnalyzer {
                 // TODO add support for type variables
                 LOG.debug("Ignoring type of field access in '{}' due to the type variable '{}'", context.currentFile, node);
             } else {
-                final ElementNames typeOfField = astUtils.getSimplifiedType(variableBinding.getType(), context.anonymousTypeDeclarations);
-                graphBuilder.addType(typeOfField);
-                graphBuilder.addOfTypeRelationship(field, typeOfField);
+                final ITypeBinding fieldTypeBinding = astUtils.getSimplifiedTypeBinding(variableBinding.getType());
+                final ElementNames fieldType = astUtils.getName(fieldTypeBinding, context.anonymousTypeDeclarations);
+                addType(fieldType, fieldTypeBinding);
+                graphBuilder.addOfTypeRelationship(field, fieldType);
             }
             // The actual access field relationship
             final ASTNode enclosingNode = astUtils.getEnclosingNode(node);
@@ -482,6 +483,12 @@ public class SourceCodeAnalyzer {
         @Override
         public boolean visit(SingleMemberAnnotation node) {
             return false;
+        }
+
+        private void addType(@Nonnull final ElementNames declaredType, @Nonnull final ITypeBinding typeBinding) {
+            Objects.requireNonNull(declaredType);
+            Objects.requireNonNull(typeBinding);
+            graphBuilder.addType(declaredType, typeBinding.isClass(), typeBinding.isEnum(), typeBinding.isInterface(), typeBinding.isPrimitive(), Modifier.isAbstract(typeBinding.getModifiers()));
         }
 
         private static class JavaFileContext {

@@ -19,10 +19,10 @@ public class LocalClassTest {
 
     @Test
     void verifyTypeIsDetected() throws URISyntaxException {
-        final Type singleType = new Type("pkg.SingleType", "SingleType");
+        final Type singleType = Type.createClass("pkg.SingleType", "SingleType");
         final Method method = new Method("pkg.SingleType.method()", "method()");
 
-        final Type localClass = new Type("pkg.SingleType$1LocalClass", "SingleType$1LocalClass");
+        final Type localClass = Type.createClass("pkg.SingleType$1LocalClass", "SingleType$1LocalClass");
         final Method runMethod = new Method("pkg.SingleType$1LocalClass.run()", "run()");
         final Constructor constructor = new Constructor("pkg.SingleType$1LocalClass.<init>()", "<init>()");
 

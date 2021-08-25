@@ -12,9 +12,9 @@ public class GraphBuilder {
     @Nonnull
     private final HashMap<String, Object> graph = new HashMap<>();
 
-    public void addType(@Nonnull final ElementNames type) {
+    public void addType(@Nonnull final ElementNames type, boolean isClass, boolean isEnum, boolean isInterface, boolean isPrimitive, boolean isAbstract) {
         Objects.requireNonNull(type);
-        createObjectIfMissing(type.fullyQualified(), () -> new Type(type.fullyQualified(), type.simple()));
+        createObjectIfMissing(type.fullyQualified(), () -> new Type(type.fullyQualified(), type.simple(), isClass, isEnum, isInterface, isPrimitive, isAbstract));
     }
 
     public void addInheritsRelationship(@Nonnull final ElementNames subType, @Nonnull final ElementNames superType) {

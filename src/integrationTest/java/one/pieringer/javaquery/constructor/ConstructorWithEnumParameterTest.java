@@ -14,8 +14,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ConstructorWithEnumParameterTest {
     @Test
     void verifyConstructorIsDetected() throws URISyntaxException {
-        final Type enumType = new Type("pkg.EnumType", "EnumType");
-        final Type type = new Type("pkg.TypeWithConstructor", "TypeWithConstructor");
+        final Type enumType = Type.createEnum("pkg.EnumType", "EnumType");
+        final Type type = Type.createClass("pkg.TypeWithConstructor", "TypeWithConstructor");
         final Constructor constructor = new Constructor("pkg.TypeWithConstructor.<init>(pkg.EnumType)", "<init>(EnumType)");
         final HasConstructorRelationship hasConstructorRelationship = new HasConstructorRelationship(type, constructor);
         final Set<Object> expectedElements = Set.of(enumType, type, constructor, hasConstructorRelationship);

@@ -15,8 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class FieldTestWithEnumType {
     @Test
     void verifyFieldIsDetected() throws URISyntaxException {
-        final Type typeWithField = new Type("pkg.TypeWithField", "TypeWithField");
-        final Type enumType = new Type("pkg.EnumType", "EnumType");
+        final Type typeWithField = Type.createClass("pkg.TypeWithField", "TypeWithField");
+        final Type enumType = Type.createEnum("pkg.EnumType", "EnumType");
         final Field field = new Field("pkg.TypeWithField.field", "field");
         final HasFieldRelationship hasFieldRelationship = new HasFieldRelationship(typeWithField, field);
         final OfTypeRelationship ofTypeRelationship = new OfTypeRelationship(field, enumType);

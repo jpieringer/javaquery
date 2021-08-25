@@ -25,14 +25,13 @@ public class ASTUtils {
     }
 
     @Nonnull
-    public ElementNames getSimplifiedType(@Nonnull final ITypeBinding typeBinding, @Nonnull final HashMap<ITypeBinding, ElementNames> anonymousTypeDeclarations) {
+    public ITypeBinding getSimplifiedTypeBinding(@Nonnull final ITypeBinding typeBinding) {
         Objects.requireNonNull(typeBinding);
-        Objects.requireNonNull(anonymousTypeDeclarations);
 
         if (typeBinding.isClass() || typeBinding.isInterface() || typeBinding.isEnum() || typeBinding.isPrimitive()) {
-            return getName(typeBinding, anonymousTypeDeclarations);
+            return typeBinding;
         } else if (typeBinding.isArray()) {
-            return getSimplifiedType(typeBinding.getComponentType(), anonymousTypeDeclarations);
+            return getSimplifiedTypeBinding(typeBinding.getComponentType());
         }
 
         throw new UnsupportedOperationException("Type " + typeBinding + " is not implemented");

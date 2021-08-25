@@ -1,16 +1,28 @@
 package one.pieringer.javaquery.plantuml;
 
-import one.pieringer.javaquery.database.ResultSet;
-import one.pieringer.javaquery.model.*;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import one.pieringer.javaquery.database.ResultSet;
+import one.pieringer.javaquery.model.AccessRelationship;
+import one.pieringer.javaquery.model.Constructor;
+import one.pieringer.javaquery.model.Executable;
+import one.pieringer.javaquery.model.Field;
+import one.pieringer.javaquery.model.HasConstructorRelationship;
+import one.pieringer.javaquery.model.HasFieldRelationship;
+import one.pieringer.javaquery.model.HasMethodRelationship;
+import one.pieringer.javaquery.model.InheritanceRelationship;
+import one.pieringer.javaquery.model.InvokeRelationship;
+import one.pieringer.javaquery.model.Method;
+import one.pieringer.javaquery.model.OfTypeRelationship;
+import one.pieringer.javaquery.model.Type;
 
 public class PlantUmlTransformer {
     public static final String START_UML = "@startuml\n";
@@ -51,7 +63,19 @@ public class PlantUmlTransformer {
         Objects.requireNonNull(stereotypes);
 
         StringBuilder uml = new StringBuilder();
-        uml.append("class ");
+        if (clazz.isAbstract()) {
+            uml.append("abstract ");
+        }
+
+        if (clazz.isClass()) {
+            uml.append("class ");
+        } else if (clazz.isEnum()) {
+            uml.append("enum ");
+        } else if (clazz.isInterface()) {
+            uml.append("interface ");
+        } else {
+            throw new IllegalArgumentException("Found a type that is not a class/enum/interface.");
+        }
         uml.append(clazz.getName());
         if (stereotypes.size() > 0) {
             uml.append(" <<");

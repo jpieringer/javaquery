@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class MethodWithoutParametersTest {
     @Test
     void verifyMethodIsDetected() throws URISyntaxException {
-        final Type type = new Type("pkg.TypeWithMethod", "TypeWithMethod");
+        final Type type = Type.createClass("pkg.TypeWithMethod", "TypeWithMethod");
         final Method method = new Method("pkg.TypeWithMethod.method()", "method()");
         final HasMethodRelationship hasMethodRelationship = new HasMethodRelationship(type, method);
         final Set<Object> expectedElements = Set.of(type, method, hasMethodRelationship);

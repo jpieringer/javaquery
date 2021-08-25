@@ -13,13 +13,13 @@ public class AnonymousClassTest {
 
     @Test
     void verifyTypeIsDetected() throws URISyntaxException {
-        final Type singleType = new Type("pkg.SingleType", "SingleType");
+        final Type singleType = Type.createClass("pkg.SingleType", "SingleType");
         final Method method = new Method("pkg.SingleType.method()", "method()");
 
-        final Type anonymousClass = new Type("pkg.SingleType$1", "SingleType$1");
+        final Type anonymousClass = Type.createClass("pkg.SingleType$1", "SingleType$1");
         final Method runMethod = new Method("pkg.SingleType$1.run()", "run()");
         final Constructor constructor = new Constructor("pkg.SingleType$1.<init>()", "<init>()");
-        final Type superType = new Type("java.lang.Runnable", "Runnable");
+        final Type superType = Type.createInterface("java.lang.Runnable", "Runnable");
 
 
         final Set<Object> expectedElements = Set.of(

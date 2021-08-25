@@ -15,8 +15,8 @@ import one.pieringer.javaquery.model.Type;
 public class FieldTestWithPrimitiveType {
     @Test
     void verifyFieldIsDetected() throws URISyntaxException {
-        final Type typeWithField = new Type("pkg.TypeWithField", "TypeWithField");
-        final Type intType = new Type("int", "int");
+        final Type typeWithField = Type.createClass("pkg.TypeWithField", "TypeWithField");
+        final Type intType = Type.createPrimitive("int", "int");
         final Field field = new Field("pkg.TypeWithField.field", "field");
         final HasFieldRelationship hasFieldRelationship = new HasFieldRelationship(typeWithField, field);
         final OfTypeRelationship ofTypeRelationship = new OfTypeRelationship(field, intType);

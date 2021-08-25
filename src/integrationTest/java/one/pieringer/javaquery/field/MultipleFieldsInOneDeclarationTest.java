@@ -15,8 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class MultipleFieldsInOneDeclarationTest {
     @Test
     void verifyMultipleFieldsAreDetected() throws URISyntaxException {
-        final Type typeWithField = new Type("pkg.TypeWithField", "TypeWithField");
-        final Type typeOfField = new Type("pkg.TypeOfField", "TypeOfField");
+        final Type typeWithField = Type.createClass("pkg.TypeWithField", "TypeWithField");
+        final Type typeOfField = Type.createClass("pkg.TypeOfField", "TypeOfField");
         final Field field1 = new Field("pkg.TypeWithField.field1", "field1");
         final Field field2 = new Field("pkg.TypeWithField.field2", "field2");
         final HasFieldRelationship hasFieldRelationship1 = new HasFieldRelationship(typeWithField, field1);

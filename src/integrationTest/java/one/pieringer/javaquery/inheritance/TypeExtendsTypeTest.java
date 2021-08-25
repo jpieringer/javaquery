@@ -13,8 +13,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TypeExtendsTypeTest {
     @Test
     void verifyInheritanceIsDetected() throws URISyntaxException {
-        final Type superType = new Type("pkg.SuperType", "SuperType");
-        final Type subType = new Type("pkg.SubType", "SubType");
+        final Type superType = Type.createClass("pkg.SuperType", "SuperType");
+        final Type subType = Type.createClass("pkg.SubType", "SubType");
         final InheritanceRelationship inheritanceRelationship = new InheritanceRelationship(subType, superType);
         final Set<Object> expectedElements = Set.of(superType, subType, inheritanceRelationship);
 

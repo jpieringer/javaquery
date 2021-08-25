@@ -12,13 +12,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class AccessPrimitiveFieldTest {
     @Test
     void verifyPrimitiveFieldAccessIsDetected() throws URISyntaxException {
-        final Type typeWithField = new Type("pkg.TypeWithField", "TypeWithField");
-        final Type typeOfField = new Type("int", "int");
+        final Type typeWithField = Type.createClass("pkg.TypeWithField", "TypeWithField");
+        final Type typeOfField = Type.createPrimitive("int", "int");
         final Field field = new Field("pkg.TypeWithField.field", "field");
         final HasFieldRelationship hasFieldRelationship = new HasFieldRelationship(typeWithField, field);
         final OfTypeRelationship ofTypeRelationship = new OfTypeRelationship(field, typeOfField);
 
-        final Type typeThatAccessesField = new Type("pkg.TypeThatAccessesField", "TypeThatAccessesField");
+        final Type typeThatAccessesField = Type.createClass("pkg.TypeThatAccessesField", "TypeThatAccessesField");
         final Method method = new Method("pkg.TypeThatAccessesField.method()", "method()");
         final HasMethodRelationship hasMethodRelationship = new HasMethodRelationship(typeThatAccessesField, method);
 

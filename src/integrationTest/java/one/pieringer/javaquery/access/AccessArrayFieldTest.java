@@ -1,24 +1,30 @@
 package one.pieringer.javaquery.access;
 
-import one.pieringer.javaquery.AnalyzerTestRunner;
-import one.pieringer.javaquery.model.*;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URISyntaxException;
 import java.util.Set;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import one.pieringer.javaquery.AnalyzerTestRunner;
+import one.pieringer.javaquery.model.AccessRelationship;
+import one.pieringer.javaquery.model.Field;
+import one.pieringer.javaquery.model.HasFieldRelationship;
+import one.pieringer.javaquery.model.HasMethodRelationship;
+import one.pieringer.javaquery.model.Method;
+import one.pieringer.javaquery.model.OfTypeRelationship;
+import one.pieringer.javaquery.model.Type;
 
 public class AccessArrayFieldTest {
     @Test
     void verifyFieldAccessIsDetected() throws URISyntaxException {
-        final Type typeWithField = new Type("pkg.TypeWithField", "TypeWithField");
-        final Type typeOfField = new Type("pkg.TypeOfField", "TypeOfField");
+        final Type typeWithField = Type.createClass("pkg.TypeWithField", "TypeWithField");
+        final Type typeOfField = Type.createClass("pkg.TypeOfField", "TypeOfField");
         final Field field = new Field("pkg.TypeWithField.field", "field");
         final HasFieldRelationship hasFieldRelationship = new HasFieldRelationship(typeWithField, field);
         final OfTypeRelationship ofTypeRelationship = new OfTypeRelationship(field, typeOfField);
 
-        final Type typeThatAccessesField = new Type("pkg.TypeThatAccessesField", "TypeThatAccessesField");
+        final Type typeThatAccessesField = Type.createClass("pkg.TypeThatAccessesField", "TypeThatAccessesField");
         final Method method = new Method("pkg.TypeThatAccessesField.method()", "method()");
         final HasMethodRelationship hasMethodRelationship = new HasMethodRelationship(typeThatAccessesField, method);
 

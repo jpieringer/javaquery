@@ -14,7 +14,7 @@ public class TypeTest {
     @Test
     void verifyTypeIsDetected() throws URISyntaxException {
         final Set<Object> expectedElements = Set.of(
-                new Type("pkg.SingleType", "SingleType")
+                Type.createClass("pkg.SingleType", "SingleType")
         );
 
         final Set<Object> actualElements = AnalyzerTestRunner.analyzeClassesOfTest(TypeTest.class);

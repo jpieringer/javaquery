@@ -15,11 +15,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class InvokeMethodTest {
     @Test
     void verifyInvokeMethodIsDetected() throws URISyntaxException {
-        final Type typeWithMethod = new Type("pkg.TypeWithMethod", "TypeWithMethod");
+        final Type typeWithMethod = Type.createClass("pkg.TypeWithMethod", "TypeWithMethod");
         final Method method = new Method("pkg.TypeWithMethod.method(java.lang.String, int)", "method(String, int)");
         final HasMethodRelationship hasMethodRelationship = new HasMethodRelationship(typeWithMethod, method);
 
-        final Type typeThatInvokesMethod = new Type("pkg.TypeThatInvokesMethod", "TypeThatInvokesMethod");
+        final Type typeThatInvokesMethod = Type.createClass("pkg.TypeThatInvokesMethod", "TypeThatInvokesMethod");
         final Method invokingMethod = new Method("pkg.TypeThatInvokesMethod.invokingMethod()", "invokingMethod()");
         final HasMethodRelationship hasInvokingMethodRelationship = new HasMethodRelationship(typeThatInvokesMethod, invokingMethod);
 
