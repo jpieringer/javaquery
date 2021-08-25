@@ -79,6 +79,11 @@ A java class/interface/enum.
 Properties:
 - *name*: The simple name like `HashMap`.
 - *qualifiedName*: The fully qualified name like `java.util.HashMap`.
+- *isClass*
+- *isInterface*
+- *isEnum*
+- *isPrimitive*
+- *isAbstract*
 
 #### Constructor
 A constructor of a class.

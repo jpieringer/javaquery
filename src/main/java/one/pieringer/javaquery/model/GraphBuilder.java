@@ -1,16 +1,22 @@
 package one.pieringer.javaquery.model;
 
+import javax.annotation.Nonnull;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Supplier;
+
 import one.pieringer.javaquery.FullyQualifiedNameUtils;
 import one.pieringer.javaquery.analyzer.ElementNames;
-
-import javax.annotation.Nonnull;
-import java.util.*;
-import java.util.function.Supplier;
 
 public class GraphBuilder {
 
     @Nonnull
     private final HashMap<String, Object> graph = new HashMap<>();
+    @Nonnull
+    private final Object lockObject = new Object();
 
     public void addType(@Nonnull final ElementNames type, boolean isClass, boolean isEnum, boolean isInterface, boolean isPrimitive, boolean isAbstract) {
         Objects.requireNonNull(type);
@@ -101,8 +107,10 @@ public class GraphBuilder {
     }
 
     private <T> void createObjectIfMissing(@Nonnull final String fullyQualifiedName, @Nonnull final Supplier<T> newObjectSupplier) {
-        if (!graph.containsKey(fullyQualifiedName)) {
-            graph.put(fullyQualifiedName, newObjectSupplier.get());
+        synchronized (this.lockObject) {
+            if (!graph.containsKey(fullyQualifiedName)) {
+                graph.put(fullyQualifiedName, newObjectSupplier.get());
+            }
         }
     }
 
