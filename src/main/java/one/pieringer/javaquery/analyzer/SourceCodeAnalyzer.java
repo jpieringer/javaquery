@@ -37,49 +37,13 @@ public class SourceCodeAnalyzer {
         Objects.requireNonNull(sourceCodeProvider);
 
         final GraphBuilder graphBuilder = new GraphBuilder();
-        final Visitor visitor = new Visitor(graphBuilder, astUtils);
 
         final List<String> sourcePathEntries = sourceCodeProvider.getSourceFolders().stream().map(File::getAbsolutePath).collect(Collectors.toList());
         sourcePathEntries.addAll(sourceCodeProvider.getDependencySourceDirectories().stream().map(File::getAbsolutePath).collect(Collectors.toList()));
         final List<String> classPathEntries = sourceCodeProvider.getDependencyJarFiles().stream().map(File::getAbsolutePath).collect(Collectors.toList());
 
         final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-        sourceCodeProvider.visitJavaFiles((project, javaFile) -> {
-            executorService.submit(() -> {
-                ASTParser parser = ASTParser.newParser(AST.JLS_Latest);
-                parser.setResolveBindings(true);
-                parser.setKind(ASTParser.K_COMPILATION_UNIT);
-                parser.setBindingsRecovery(true);
-                final Hashtable<String, String> options = JavaCore.getOptions();
-                options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.latestSupportedJavaVersion());
-                options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.latestSupportedJavaVersion());
-                options.put(JavaCore.COMPILER_SOURCE, JavaCore.latestSupportedJavaVersion());
-                parser.setCompilerOptions(options);
-                parser.setEnvironment(classPathEntries.toArray(String[]::new), sourcePathEntries.toArray(new String[0]), sourcePathEntries.stream().map(f -> StandardCharsets.UTF_8.name()).toArray(String[]::new), true);
-
-                parser.setUnitName(javaFile.getAbsolutePath().replace(project.getAbsolutePath(), ""));
-                try {
-                    final String currentJavaFileName = FilenameUtils.removeExtension(javaFile.getName());
-
-                    parser.setSource(Files.readString(javaFile.toPath()).toCharArray());
-
-                    CompilationUnit compilationUnit = (CompilationUnit) parser.createAST(null);
-                    for (IProblem problem : compilationUnit.getProblems()) {
-                        if (problem.isError()) {
-                            LOG.debug("Compilation error in '" + currentJavaFileName + "': " + problem);
-                        }
-                    }
-
-                    visitor.setContext(new Visitor.JavaFileContext(currentJavaFileName));
-                    compilationUnit.accept(visitor);
-                } catch (RuntimeException | IOException e) {
-                    throw new RuntimeException("Failed to analyze file '" + javaFile.getAbsolutePath() + "'", e);
-                } catch (AssertionError e) {
-                    throw new AssertionError("Failed to analyze file '" + javaFile.getAbsolutePath() + "'", e);
-                }
-            });
-        });
-
+        sourceCodeProvider.visitJavaFiles((project, javaFile) -> executorService.submit(() -> analyzeJavaFile(project, javaFile, sourcePathEntries, classPathEntries, graphBuilder)));
         executorService.shutdown();
 
         try {
@@ -91,6 +55,44 @@ public class SourceCodeAnalyzer {
         }
 
         return graphBuilder.getGraph();
+    }
+
+    private void analyzeJavaFile(@Nonnull final File project, @Nonnull final File javaFile,
+                                 @Nonnull final List<String> sourcePathEntries,
+                                 @Nonnull final List<String> classPathEntries,
+                                 @Nonnull final GraphBuilder graphBuilder) {
+        final Visitor visitor = new Visitor(graphBuilder, astUtils);
+        final ASTParser parser = ASTParser.newParser(AST.JLS_Latest);
+        parser.setResolveBindings(true);
+        parser.setKind(ASTParser.K_COMPILATION_UNIT);
+        parser.setBindingsRecovery(true);
+        final Hashtable<String, String> options = JavaCore.getOptions();
+        options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.latestSupportedJavaVersion());
+        options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.latestSupportedJavaVersion());
+        options.put(JavaCore.COMPILER_SOURCE, JavaCore.latestSupportedJavaVersion());
+        parser.setCompilerOptions(options);
+        parser.setEnvironment(classPathEntries.toArray(String[]::new), sourcePathEntries.toArray(new String[0]), sourcePathEntries.stream().map(f -> StandardCharsets.UTF_8.name()).toArray(String[]::new), true);
+
+        parser.setUnitName(javaFile.getAbsolutePath().replace(project.getAbsolutePath(), ""));
+        try {
+            final String currentJavaFileName = FilenameUtils.removeExtension(javaFile.getName());
+
+            parser.setSource(Files.readString(javaFile.toPath()).toCharArray());
+
+            CompilationUnit compilationUnit = (CompilationUnit) parser.createAST(null);
+            for (IProblem problem : compilationUnit.getProblems()) {
+                if (problem.isError()) {
+                    LOG.debug("Compilation error in '" + currentJavaFileName + "': " + problem);
+                }
+            }
+
+            visitor.setContext(new Visitor.JavaFileContext(currentJavaFileName));
+            compilationUnit.accept(visitor);
+        } catch (RuntimeException | IOException e) {
+            throw new RuntimeException("Failed to analyze file '" + javaFile.getAbsolutePath() + "'", e);
+        } catch (AssertionError e) {
+            throw new AssertionError("Failed to analyze file '" + javaFile.getAbsolutePath() + "'", e);
+        }
     }
 
     private static class Visitor extends ASTVisitor {
