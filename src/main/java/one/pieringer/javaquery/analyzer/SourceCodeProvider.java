@@ -1,15 +1,15 @@
 package one.pieringer.javaquery.analyzer;
 
+import javax.annotation.Nonnull;
+import java.io.File;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import javax.annotation.Nonnull;
-import java.io.File;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
-import java.util.function.BiConsumer;
+import com.google.common.collect.Streams;
 
 public class SourceCodeProvider {
 
@@ -44,18 +44,18 @@ public class SourceCodeProvider {
         return dependencyJarFiles;
     }
 
-    public void visitJavaFiles(@Nonnull final BiConsumer<File, File> javaFileConsumer) {
-        int i = 0;
-        for (File sourceFolder : sourceFolders) {
-            i++;
-            LOG.info("({}/{}) Visiting {}", i, sourceFolders.size(), sourceFolder);
-            Iterator<File> it = FileUtils.iterateFiles(sourceFolder, new String[]{"java"}, true);
-            int fileCount = 0;
-            while (it.hasNext()) {
-                javaFileConsumer.accept(sourceFolder, it.next());
-                fileCount++;
-            }
-            LOG.info("({}/{}) Parsed (Files: {})", i, sourceFolders.size(), fileCount);
+    public Stream<JavaFile> getJavaFileStream() {
+        return sourceFolders.stream()
+                .map(sourceFolder -> Streams.stream(FileUtils.iterateFiles(sourceFolder, new String[]{"java"}, true))
+                        .map(javaFile -> new JavaFile(sourceFolder, javaFile)))
+                .reduce(Streams::concat)
+                .orElseGet(Stream::empty);
+    }
+
+    public static record JavaFile(@Nonnull File sourceFolder, @Nonnull File javaFile) {
+        public JavaFile(@Nonnull File sourceFolder, @Nonnull File javaFile) {
+            this.sourceFolder = Objects.requireNonNull(sourceFolder);
+            this.javaFile = Objects.requireNonNull(javaFile);
         }
     }
 }

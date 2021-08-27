@@ -16,9 +16,6 @@ import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class SourceCodeAnalyzer {
@@ -42,17 +39,7 @@ public class SourceCodeAnalyzer {
         sourcePathEntries.addAll(sourceCodeProvider.getDependencySourceDirectories().stream().map(File::getAbsolutePath).collect(Collectors.toList()));
         final List<String> classPathEntries = sourceCodeProvider.getDependencyJarFiles().stream().map(File::getAbsolutePath).collect(Collectors.toList());
 
-        final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-        sourceCodeProvider.visitJavaFiles((project, javaFile) -> executorService.submit(() -> analyzeJavaFile(project, javaFile, sourcePathEntries, classPathEntries, graphBuilder)));
-        executorService.shutdown();
-
-        try {
-            if (!executorService.awaitTermination(999, TimeUnit.DAYS)) {
-                LOG.error("Analyzing the source files run into a timeout.");
-            }
-        } catch (InterruptedException e) {
-            LOG.error("Analyzing the source files got interrupted.", e);
-        }
+        sourceCodeProvider.getJavaFileStream().parallel().forEach((javaFile) -> analyzeJavaFile(javaFile.sourceFolder(), javaFile.javaFile(), sourcePathEntries, classPathEntries, graphBuilder));
 
         return graphBuilder.getGraph();
     }
