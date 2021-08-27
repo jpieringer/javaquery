@@ -9,7 +9,6 @@ import java.util.Objects;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import one.pieringer.javaquery.database.ResultSet;
 import one.pieringer.javaquery.model.AccessRelationship;
 import one.pieringer.javaquery.model.Constructor;
@@ -74,7 +73,8 @@ public class PlantUmlTransformer {
         } else if (clazz.isInterface()) {
             uml.append("interface ");
         } else {
-            throw new IllegalArgumentException("Found a type that is not a class/enum/interface.");
+            uml.append("class ");
+//            throw new IllegalArgumentException("Found a type that is not a class/enum/interface: " + clazz);
         }
         uml.append(clazz.getName());
         if (stereotypes.size() > 0) {

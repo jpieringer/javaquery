@@ -21,6 +21,10 @@ public class ASTUtils {
             return typeDeclarations.get(typeBinding);
         }
 
+        if (typeBinding.isParameterizedType()) {
+            return new ElementNames(typeBinding.getErasure().getQualifiedName(), typeBinding.getErasure().getName());
+        }
+
         return new ElementNames(typeBinding.getQualifiedName(), typeBinding.getName());
     }
 
