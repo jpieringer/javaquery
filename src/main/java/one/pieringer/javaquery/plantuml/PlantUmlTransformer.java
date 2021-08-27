@@ -102,7 +102,7 @@ public class PlantUmlTransformer {
         StringBuilder uml = new StringBuilder();
         uml.append(inheritanceRelationship.getSubType().getName());
         uml.append(" ");
-        uml.append("--|> ");
+        uml.append("-up-|> ");
         uml.append(inheritanceRelationship.getSuperType().getName());
         uml.append(" ");
         uml.append(": inherits");
