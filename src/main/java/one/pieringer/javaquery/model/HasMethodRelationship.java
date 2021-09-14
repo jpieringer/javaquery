@@ -1,7 +1,10 @@
 package one.pieringer.javaquery.model;
 
 import com.google.common.base.MoreObjects;
-import org.neo4j.ogm.annotation.*;
+import org.neo4j.ogm.annotation.EndNode;
+import org.neo4j.ogm.annotation.Id;
+import org.neo4j.ogm.annotation.RelationshipEntity;
+import org.neo4j.ogm.annotation.StartNode;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -11,8 +14,7 @@ public class HasMethodRelationship {
     public static final String TYPE = "HAS_METHOD";
 
     @Id
-    @GeneratedValue()
-    private Long relationshipId;
+    private final String relationshipId;
 
     @StartNode
     @Nonnull
@@ -30,11 +32,13 @@ public class HasMethodRelationship {
     public HasMethodRelationship() {
         this.declaringType = null;
         this.method = null;
+        this.relationshipId = null;
     }
 
     public HasMethodRelationship(@Nonnull final Type declaringType, @Nonnull final Method method) {
         this.declaringType = Objects.requireNonNull(declaringType);
         this.method = Objects.requireNonNull(method);
+        this.relationshipId = declaringType.getFullyQualifiedName() + "|" + method.getFullyQualifiedName();
     }
 
     @Nonnull

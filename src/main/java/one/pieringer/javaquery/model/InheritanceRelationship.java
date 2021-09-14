@@ -1,6 +1,9 @@
 package one.pieringer.javaquery.model;
 
-import org.neo4j.ogm.annotation.*;
+import org.neo4j.ogm.annotation.EndNode;
+import org.neo4j.ogm.annotation.Id;
+import org.neo4j.ogm.annotation.RelationshipEntity;
+import org.neo4j.ogm.annotation.StartNode;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -11,8 +14,8 @@ public class InheritanceRelationship {
     public static final String TYPE = "INHERITS";
 
     @Id
-    @GeneratedValue
-    private Long relationshipId;
+    @Nonnull
+    private final String relationshipId;
 
     @StartNode
     @Nonnull
@@ -28,14 +31,15 @@ public class InheritanceRelationship {
     @Deprecated
     @SuppressWarnings("ConstantConditions")
     public InheritanceRelationship() {
-        this.relationshipId = null;
         this.subType = null;
         this.superType = null;
+        this.relationshipId = null;
     }
 
     public InheritanceRelationship(@Nonnull final Type subType, @Nonnull final Type superType) {
         this.subType = Objects.requireNonNull(subType);
         this.superType = Objects.requireNonNull(superType);
+        this.relationshipId = subType.getFullyQualifiedName() + "|" + superType.getFullyQualifiedName();
     }
 
     @Nonnull

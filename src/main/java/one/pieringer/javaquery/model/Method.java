@@ -1,13 +1,12 @@
 package one.pieringer.javaquery.model;
 
-import com.google.common.base.MoreObjects;
-import org.neo4j.ogm.annotation.GeneratedValue;
+import javax.annotation.Nonnull;
+import java.util.Objects;
+
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Property;
-
-import javax.annotation.Nonnull;
-import java.util.Objects;
+import com.google.common.base.MoreObjects;
 
 @NodeEntity
 public class Method implements Executable {
@@ -16,9 +15,6 @@ public class Method implements Executable {
     public static final String NAME = "name";
 
     @Id
-    @GeneratedValue
-    private Long id;
-
     @Nonnull
     @Property(FULLY_QUALIFIED_NAME)
     private final String fullyQualifiedName;

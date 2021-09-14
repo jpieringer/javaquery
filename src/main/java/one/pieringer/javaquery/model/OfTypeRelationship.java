@@ -1,7 +1,10 @@
 package one.pieringer.javaquery.model;
 
 import com.google.common.base.MoreObjects;
-import org.neo4j.ogm.annotation.*;
+import org.neo4j.ogm.annotation.EndNode;
+import org.neo4j.ogm.annotation.Id;
+import org.neo4j.ogm.annotation.RelationshipEntity;
+import org.neo4j.ogm.annotation.StartNode;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -11,8 +14,8 @@ public class OfTypeRelationship {
     public static final String TYPE = "OF_TYPE";
 
     @Id
-    @GeneratedValue
-    private Long relationshipId;
+    @Nonnull
+    private final String relationshipId;
 
     @StartNode
     @Nonnull
@@ -30,11 +33,13 @@ public class OfTypeRelationship {
     public OfTypeRelationship() {
         this.field = null;
         this.fieldType = null;
+        this.relationshipId = null;
     }
 
     public OfTypeRelationship(@Nonnull final Field field, @Nonnull final Type fieldType) {
         this.fieldType = Objects.requireNonNull(fieldType);
         this.field = Objects.requireNonNull(field);
+        this.relationshipId = field.getFullyQualifiedName() + "|" + fieldType.getFullyQualifiedName();
     }
 
     @Nonnull

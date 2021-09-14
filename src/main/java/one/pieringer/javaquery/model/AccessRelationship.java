@@ -1,18 +1,21 @@
 package one.pieringer.javaquery.model;
 
-import com.google.common.base.MoreObjects;
-import org.neo4j.ogm.annotation.*;
-
 import javax.annotation.Nonnull;
 import java.util.Objects;
+
+import org.neo4j.ogm.annotation.EndNode;
+import org.neo4j.ogm.annotation.Id;
+import org.neo4j.ogm.annotation.RelationshipEntity;
+import org.neo4j.ogm.annotation.StartNode;
+import com.google.common.base.MoreObjects;
 
 @RelationshipEntity(type = AccessRelationship.TYPE)
 public class AccessRelationship {
     public static final String TYPE = "ACCESS";
 
     @Id
-    @GeneratedValue
-    private Long relationshipId;
+    @Nonnull
+    private final String relationshipId;
 
     @StartNode
     @Nonnull
@@ -30,11 +33,13 @@ public class AccessRelationship {
     public AccessRelationship() {
         this.accessingExecutable = null;
         this.field = null;
+        this.relationshipId = null;
     }
 
     public AccessRelationship(@Nonnull final Executable accessingExecutable, @Nonnull final Field field) {
         this.accessingExecutable = Objects.requireNonNull(accessingExecutable);
         this.field = Objects.requireNonNull(field);
+        this.relationshipId = accessingExecutable.getFullyQualifiedName() + "|" + field.getFullyQualifiedName();
     }
 
     @Nonnull

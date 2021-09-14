@@ -11,8 +11,7 @@ public class HasFieldRelationship {
     public static final String TYPE = "HAS_FIELD";
 
     @Id
-    @GeneratedValue
-    private Long relationshipId;
+    private final String relationshipId;
 
     @StartNode
     @Nonnull
@@ -30,11 +29,13 @@ public class HasFieldRelationship {
     public HasFieldRelationship() {
         this.declaringType = null;
         this.field = null;
+        this.relationshipId = null;
     }
 
     public HasFieldRelationship(@Nonnull final Type declaringType, @Nonnull final Field field) {
-        this.field = Objects.requireNonNull(field);
         this.declaringType = Objects.requireNonNull(declaringType);
+        this.field = Objects.requireNonNull(field);
+        this.relationshipId = declaringType.getFullyQualifiedName() + "|" + field.getFullyQualifiedName();
     }
 
     @Nonnull

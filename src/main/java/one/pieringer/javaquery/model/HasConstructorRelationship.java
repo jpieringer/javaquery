@@ -1,18 +1,21 @@
 package one.pieringer.javaquery.model;
 
-import com.google.common.base.MoreObjects;
-import org.neo4j.ogm.annotation.*;
-
 import javax.annotation.Nonnull;
 import java.util.Objects;
+
+import org.neo4j.ogm.annotation.EndNode;
+import org.neo4j.ogm.annotation.Id;
+import org.neo4j.ogm.annotation.RelationshipEntity;
+import org.neo4j.ogm.annotation.StartNode;
+import com.google.common.base.MoreObjects;
 
 @RelationshipEntity(type = HasConstructorRelationship.TYPE)
 public class HasConstructorRelationship {
     public static final String TYPE = "HAS_CONSTRUCTOR";
 
     @Id
-    @GeneratedValue()
-    private Long relationshipId;
+    @Nonnull
+    private final String relationshipId;
 
     @StartNode
     @Nonnull
@@ -30,11 +33,13 @@ public class HasConstructorRelationship {
     public HasConstructorRelationship() {
         this.declaringType = null;
         this.constructor = null;
+        this.relationshipId = null;
     }
 
     public HasConstructorRelationship(@Nonnull final Type declaringType, @Nonnull final Constructor constructor) {
         this.declaringType = Objects.requireNonNull(declaringType);
         this.constructor = Objects.requireNonNull(constructor);
+        this.relationshipId = declaringType.getFullyQualifiedName() + "|" + constructor.getFullyQualifiedName();
     }
 
     @Nonnull
