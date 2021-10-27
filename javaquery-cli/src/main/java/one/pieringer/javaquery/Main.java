@@ -1,28 +1,5 @@
 package one.pieringer.javaquery;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
-
-import org.apache.batik.transcoder.TranscoderException;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.neo4j.ogm.config.Configuration;
-import org.neo4j.ogm.session.SessionFactory;
-
 import one.pieringer.javaquery.analyzer.ASTUtils;
 import one.pieringer.javaquery.analyzer.Analyzer;
 import one.pieringer.javaquery.analyzer.SourceCodeAnalyzerFactory;
@@ -31,7 +8,21 @@ import one.pieringer.javaquery.database.GraphPersistence;
 import one.pieringer.javaquery.plantuml.PlantUmlToFileWriter;
 import one.pieringer.javaquery.plantuml.PlantUmlTransformer;
 import one.pieringer.javaquery.plantuml.QueryRunner;
+import org.apache.batik.transcoder.TranscoderException;
+import org.apache.commons.cli.*;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.neo4j.ogm.config.Configuration;
+import org.neo4j.ogm.session.SessionFactory;
 import scala.reflect.io.File;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 public class Main {
 

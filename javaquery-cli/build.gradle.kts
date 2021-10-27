@@ -6,11 +6,6 @@ plugins {
     id("com.palantir.docker") version "0.22.1"
 }
 
-repositories {
-    mavenCentral()
-    maven(url = "https://repository.jboss.org/nexus/content/repositories/thirdparty-releases/")
-}
-
 sourceSets {
     create("integrationTest") {
         java {
@@ -59,7 +54,7 @@ java {
 
 tasks {
     named<ShadowJar>("shadowJar") {
-        archiveFileName.set("javaquery-full.jar")
+        archiveFileName.set("javaquery-cli-full.jar")
         mergeServiceFiles()
         manifest {
             attributes(mapOf("Main-Class" to "one.pieringer.javaquery.Main"))
