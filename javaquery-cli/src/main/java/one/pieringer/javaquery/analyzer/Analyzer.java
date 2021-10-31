@@ -1,5 +1,11 @@
 package one.pieringer.javaquery.analyzer;
 
+import one.pieringer.javaquery.database.GraphPersistence;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.time.StopWatch;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.util.ArrayList;
@@ -8,12 +14,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.time.StopWatch;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import one.pieringer.javaquery.database.GraphPersistence;
 
 public class Analyzer {
 
@@ -56,7 +56,11 @@ public class Analyzer {
         }
 
         final SourceCodeProvider sourceCodeProvider = new SourceCodeProvider(
-                sourceDirectories.stream().map(File::new).collect(Collectors.toList()),
+                sourceDirectories.stream()
+                        .map(File::new)
+                        .filter(File::exists)
+                        .filter(File::isDirectory)
+                        .collect(Collectors.toList()),
                 dependencySourceDirectories,
                 dependencyJarFiles);
 
