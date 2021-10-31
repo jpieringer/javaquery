@@ -78,12 +78,15 @@ gradlew javaquery -Djava16.home="C:\Program Files\AdoptOpenJDK\jdk-16.0.1.9-hots
 ## Synopsis
 ```
 java -jar javaquery-full.jar 
-(-analyze <paths separated with ;> -dependencies <paths separated with;>|-query <cypher query>)
+(-clean|-analyze <paths separated with ;> -dependencies <paths separated with;>|-query <cypher query>)
 [-databaseUri <database URI>]
 [-stereotype <name> -stereotypeQuery <cypher query>]*
 ```
 
 ## Options
+*-clean*
+Clean the database before adding the new analysis results.
+
 *-analyze <paths separated with ;>*
 Analyze the specified source directories and store the simplified AST in the database. Omit this parameter if the database of the last analysis should be used.
 

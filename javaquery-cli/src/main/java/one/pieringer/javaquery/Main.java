@@ -12,6 +12,8 @@ import org.apache.batik.transcoder.TranscoderException;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.neo4j.ogm.config.Configuration;
 import org.neo4j.ogm.session.SessionFactory;
 import scala.reflect.io.File;
@@ -25,7 +27,9 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class Main {
+    private static final Logger LOG = LogManager.getLogger(Main.class);
 
+    private static final String OPTION_CLEAN = "clean";
     private static final String OPTION_ANALYZE = "analyze";
     private static final String OPTION_DEPENDENCIES = "dependencies";
     private static final String OPTION_QUERY = "query";
@@ -62,6 +66,7 @@ public class Main {
         Objects.requireNonNull(args);
 
         final Options options = new Options();
+        options.addOption(OPTION_CLEAN, false, "Clean the database before analyzing.");
         options.addOption(OPTION_ANALYZE, true, "Analyze the source code of the specified folders separated with a ';'.");
         options.addOption(OPTION_DEPENDENCIES, true, "The dependencies of the source code that is used for resolving types. Jar files or folders separated with a ';'.");
         options.addOption(OPTION_QUERY, true, "Run the specified Cypher query.");
@@ -101,6 +106,7 @@ public class Main {
         }
 
         return new CommandLineOptions(
+                cmd.hasOption(OPTION_CLEAN),
                 analyze != null,
                 sourceDirectories,
                 dependencies,
@@ -138,6 +144,11 @@ public class Main {
         final GraphPersistence graphPersistence = new GraphPersistence(sessionFactory);
 
         try {
+            if (commandLineOptions.doClean) {
+                graphPersistence.clear();
+                LOG.info("Cleared stored graph.");
+            }
+
             if (commandLineOptions.doAnalyze) {
                 analyzer.analyze(commandLineOptions.sourceDirectories, commandLineOptions.dependencies, graphPersistence);
             }
@@ -161,6 +172,7 @@ public class Main {
     }
 
     private static class CommandLineOptions {
+        final boolean doClean;
         final boolean doAnalyze;
         @Nonnull
         final List<String> sourceDirectories;
@@ -177,12 +189,16 @@ public class Main {
         @CheckForNull
         final String outPdfPath;
 
-        public CommandLineOptions(final boolean doAnalyze, @Nonnull final List<String> sourceDirectories,
-                                  @Nonnull final List<String> dependencies, @CheckForNull final String query,
+        public CommandLineOptions(final boolean doClean,
+                                  final boolean doAnalyze,
+                                  @Nonnull final List<String> sourceDirectories,
+                                  @Nonnull final List<String> dependencies,
+                                  @CheckForNull final String query,
                                   @Nonnull final HashMap<String, String> stereotypeQueries,
                                   @CheckForNull final String databaseUri,
                                   @CheckForNull final String outSvgPath,
                                   @CheckForNull final String outPdfPath) {
+            this.doClean = doClean;
             this.doAnalyze = doAnalyze;
             this.sourceDirectories = Objects.requireNonNull(sourceDirectories);
             this.dependencies = Objects.requireNonNull(dependencies);

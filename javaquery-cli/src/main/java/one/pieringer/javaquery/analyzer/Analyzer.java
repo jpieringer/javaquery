@@ -68,10 +68,6 @@ public class Analyzer {
         LOG.info("Analysis took {} sec.", stopWatch.getTime(TimeUnit.SECONDS));
 
         stopWatch = StopWatch.createStarted();
-        graphPersistence.clear();
-        LOG.info("Cleared stored graph in {} sec.", stopWatch.getTime(TimeUnit.SECONDS));
-
-        stopWatch = StopWatch.createStarted();
         graphPersistence.persist(graph);
         LOG.info("Stored graph in {} sec.", stopWatch.getTime(TimeUnit.SECONDS));
     }
