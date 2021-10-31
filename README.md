@@ -45,7 +45,6 @@ Add the javaquery gradle task to a gradle project:
 
 ```
 import one.pieringer.javaquery.gradleplugin.JavaqueryPlugin
-import one.pieringer.javaquery.gradleplugin.JavaqueryTask
 
 buildscript {
     repositories {
@@ -53,7 +52,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'one.pieringer.javaquery.gradleplugin:one.pieringer.javaquery.gradleplugin.gradle.plugin:0.7.5'
+        classpath 'one.pieringer.javaquery.gradleplugin:one.pieringer.javaquery.gradleplugin.gradle.plugin:0.7.14'
     }
 }
 
@@ -61,18 +60,16 @@ buildscript {
 
 apply plugin: JavaqueryPlugin
 
-tasks.register('javaquery', JavaqueryTask) {
-    sourceDirs = sourceSets.main.java.srcDirs
-    auxClassPaths = sourceSets.main.compileClasspath
-    databaseUri = "bolt://localhost:7687"
+javaquery {
+    databaseUri.set("bolt://localhost:7687")
 }
 ```
 
-which adds the `javaquery` task to your project. It can only run with Java >= 16. If the gradle build does not yet run
-on Java >=16 it can be configured via the system property `java16.home`.
+which adds the `javaqueryMain` task to your project, and one additional task for each other source set. To clear the database it also adds the `javaqueryClean` task.
+It can only run with Java >= 16. If the gradle build does not yet run on Java >=16 it can be configured via the system property `java16.home`.
 
 ```
-gradlew javaquery -Djava16.home="C:\Program Files\AdoptOpenJDK\jdk-16.0.1.9-hotspot"
+gradlew javaqueryMain -Djava16.home="C:\Program Files\AdoptOpenJDK\jdk-16.0.1.9-hotspot"
 ```
 
 ## Synopsis
